@@ -194,8 +194,8 @@ struct ExtrasPanelView: View {
         tab == .system ? 10 : 0
     }
     static let bottomPadding: CGFloat = IslandMetrics.edgeInset
-    static let agentRowHeight: CGFloat = 24
-    static let outputRowHeight: CGFloat = 22
+    static let agentRowHeight: CGFloat = IslandMetrics.concentricRowHeight
+    static let outputRowHeight: CGFloat = IslandMetrics.concentricRowHeight
     static let noteHeight: CGFloat = 54
 
     /// The battery panel and music player when the notch opens: fade in while sliding

@@ -20,6 +20,9 @@ enum IslandMetrics {
     /// Corner radius of the opened notch.
     static let openedRadius: CGFloat = 32
     static let buttonHeight: CGFloat = 30
+    /// A clickable row tall enough that its highlight's rounded ends match the opened
+    /// notch's corners: twice the concentric radius (32 - 12 = 20, so 40 pt).
+    static let concentricRowHeight: CGFloat = (openedRadius - edgeInset) * 2
 
     /// A corner that runs parallel to an island corner of radius `outer`, limited to a
     /// pill for short controls.
