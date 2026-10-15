@@ -255,8 +255,9 @@ struct ExtrasPanelView: View {
                     .transition(.opacity)
             }
 
+            // Starts on the same line as the row highlights below it, so the panel reads
+            // as one column.
             HStack(spacing: 4) {
-                Spacer(minLength: 0)
                 ForEach(tabs) { tab in
                     TabChip(
                         tab: tab,
@@ -271,6 +272,7 @@ struct ExtrasPanelView: View {
                 }
                 Spacer(minLength: 0)
             }
+            .padding(.leading, IslandMetrics.rowEdgeInset - IslandMetrics.contentInset)
             .frame(height: Self.headerHeight - 4)
             .padding(.bottom, Self.contentGap(for: selected))
 
@@ -465,6 +467,7 @@ struct MicMuteButton: View {
 
 private struct AgentSessionsListView: View {
     @ObservedObject var tracker: AgentSessionTracker
+    @State private var hoveredIndex: Int?
 
     var body: some View {
         if tracker.sessions.isEmpty {
@@ -475,7 +478,7 @@ private struct AgentSessionsListView: View {
         } else {
             TimelineView(.periodic(from: .now, by: 30)) { context in
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(tracker.sessions.prefix(6)) { session in
+                    ForEach(Array(tracker.sessions.prefix(6).enumerated()), id: \.element.id) { index, session in
                         Button {
                             tracker.activate(session)
                         } label: {
@@ -483,10 +486,11 @@ private struct AgentSessionsListView: View {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .islandHoverRow(height: ExtrasPanelView.agentRowHeight)
+                        .islandRow(height: ExtrasPanelView.agentRowHeight, isHighlighted: hoveredIndex == index)
                         .help(Text(verbatim: "\(session.sourceLabel) · \(session.displayName) · click to show it"))
                     }
                 }
+                .islandRowHover(rowHeight: ExtrasPanelView.agentRowHeight, hoveredIndex: $hoveredIndex)
             }
         }
     }
@@ -618,6 +622,7 @@ private struct WorkingDots: View {
 
 private struct AudioOutputListView: View {
     @ObservedObject var manager: AudioOutputManager
+    @State private var hoveredIndex: Int?
 
     var body: some View {
         if manager.devices.isEmpty {
@@ -627,7 +632,7 @@ private struct AudioOutputListView: View {
                 .frame(height: ExtrasPanelView.outputRowHeight)
         } else {
             VStack(alignment: .leading, spacing: 0) {
-                ForEach(manager.devices.prefix(6)) { device in
+                ForEach(Array(manager.devices.prefix(6).enumerated()), id: \.element.id) { index, device in
                     let isCurrent = device.id == manager.defaultDeviceID
                     Button {
                         manager.select(device)
@@ -651,9 +656,10 @@ private struct AudioOutputListView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .islandHoverRow(height: ExtrasPanelView.outputRowHeight)
+                    .islandRow(height: ExtrasPanelView.outputRowHeight, isHighlighted: hoveredIndex == index)
                 }
             }
+            .islandRowHover(rowHeight: ExtrasPanelView.outputRowHeight, hoveredIndex: $hoveredIndex)
         }
     }
 }

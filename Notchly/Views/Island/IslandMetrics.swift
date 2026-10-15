@@ -42,12 +42,12 @@ enum IslandMetrics {
     }
 }
 
-/// A clickable row in an opened panel: highlights on hover. The highlight sits
-/// `rowEdgeInset` from the island's sides and bottom so its rounded ends run parallel to
-/// the notch's corners; the row's content sits `rowContentPadding` inside it.
-struct IslandHoverRow: ViewModifier {
+/// A clickable row in an opened panel. The highlight sits `rowEdgeInset` from the
+/// island's sides and bottom so its rounded ends run parallel to the notch's corners;
+/// the row's content sits `rowContentPadding` inside it.
+struct IslandRow: ViewModifier {
     let height: CGFloat
-    @State private var isHovered = false
+    let isHighlighted: Bool
 
     func body(content: Content) -> some View {
         content
@@ -55,20 +55,42 @@ struct IslandHoverRow: ViewModifier {
             .frame(height: height)
             .background(
                 RoundedRectangle(cornerRadius: IslandMetrics.rowRadius, style: .continuous)
-                    .fill(Color.white.opacity(isHovered || SnapshotRendering.showsRowHighlights ? 0.1 : 0))
+                    .fill(Color.white.opacity(isHighlighted || SnapshotRendering.showsRowHighlights ? 0.1 : 0))
             )
             .contentShape(Rectangle())
             // The panel already insets its content by `contentInset`; move in the rest.
             .padding(.horizontal, IslandMetrics.rowEdgeInset - IslandMetrics.contentInset)
-            .onHover { hovering in
-                withAnimation(.easeOut(duration: 0.12)) { isHovered = hovering }
-                if hovering { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
+    }
+}
+
+/// Tracks the pointer over a list of equal-height rows. One tracker for the whole list
+/// follows every mouse move, so the highlight never lags behind the pointer the way
+/// separate enter and exit events per row can.
+struct IslandRowHover: ViewModifier {
+    let rowHeight: CGFloat
+    @Binding var hoveredIndex: Int?
+
+    func body(content: Content) -> some View {
+        content.onContinuousHover { phase in
+            switch phase {
+            case let .active(location):
+                let index = max(0, Int(location.y / rowHeight))
+                if hoveredIndex != index { hoveredIndex = index }
+                NSCursor.pointingHand.set()
+            case .ended:
+                hoveredIndex = nil
+                NSCursor.arrow.set()
             }
+        }
     }
 }
 
 extension View {
-    func islandHoverRow(height: CGFloat) -> some View {
-        modifier(IslandHoverRow(height: height))
+    func islandRow(height: CGFloat, isHighlighted: Bool) -> some View {
+        modifier(IslandRow(height: height, isHighlighted: isHighlighted))
+    }
+
+    func islandRowHover(rowHeight: CGFloat, hoveredIndex: Binding<Int?>) -> some View {
+        modifier(IslandRowHover(rowHeight: rowHeight, hoveredIndex: hoveredIndex))
     }
 }
