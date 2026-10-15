@@ -56,7 +56,7 @@ struct MusicSettingsView: View {
 
                     SettingsToggleRow(
                         title: "Spotify Shuffle Control",
-                        subtitle: "Allow Notchly to toggle shuffle directly in Spotify.",
+                        subtitle: "Allow BetterNotch to toggle shuffle directly in Spotify.",
                         isOn: $settingsManager.enableSpotifyAppleScriptControl
                     )
                     .disabled(!settingsManager.showMusic)
@@ -66,7 +66,7 @@ struct MusicSettingsView: View {
 
                     SettingsToggleRow(
                         title: "Apple Music Shuffle Control",
-                        subtitle: "Allow Notchly to toggle shuffle directly in Apple Music.",
+                        subtitle: "Allow BetterNotch to toggle shuffle directly in Apple Music.",
                         isOn: $settingsManager.enableAppleMusicAppleScriptControl
                     )
                     .disabled(!settingsManager.showMusic)
@@ -74,7 +74,7 @@ struct MusicSettingsView: View {
                 }
             }
 
-            Text("macOS may ask for Automation permission the first time Notchly controls Spotify or Apple Music.")
+            Text("macOS may ask for Automation permission the first time BetterNotch controls Spotify or Apple Music.")
                 .font(.system(size: 12))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 4)

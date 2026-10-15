@@ -7,8 +7,8 @@
 import AppKit
 
 extension Notification.Name {
-    static let notchlyManualBrightnessInput = Notification.Name("xyz.notchly.manual-brightness-input")
-    static let notchlyManualVolumeInput = Notification.Name("xyz.notchly.manual-volume-input")
+    static let notchlyManualBrightnessInput = Notification.Name("com.maxhunt.betternotch.manual-brightness-input")
+    static let notchlyManualVolumeInput = Notification.Name("com.maxhunt.betternotch.manual-volume-input")
 }
 
 @MainActor

@@ -62,6 +62,12 @@ final class ClaudeHookIntegrationManager: ObservableObject {
     /// handler set (separate notify command, permission timeout). Only Notchly's own
     /// entries change; settings.json is backed up first. Does nothing if never installed.
     func migrateIfNeeded() {
+        // Entries from before the rename point at Notchly's folder: replace them.
+        let legacyScript = AgentHookPaths.legacyBinDirectoryURL.appendingPathComponent("notchly-claude-hook").path
+        if config.mentions(legacyScript) {
+            install()
+            return
+        }
         guard config.mentions(hookScriptURL.path), !isHookInstalled() || scriptIsOutdated else { return }
         install()
     }
@@ -113,6 +119,6 @@ final class ClaudeHookIntegrationManager: ObservableObject {
     }
 
     private var hookScriptURL: URL {
-        AgentHookPaths.binDirectoryURL.appendingPathComponent("notchly-claude-hook")
+        AgentHookPaths.binDirectoryURL.appendingPathComponent("betternotch-claude-hook")
     }
 }

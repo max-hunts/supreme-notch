@@ -78,3 +78,9 @@ final class ScrollTrackingView: NSView {
         }
     }
 }
+
+/// True while views are drawn offscreen for README images; AppKit-backed views such as
+/// the swipe catcher cannot be drawn there.
+enum SnapshotRendering {
+    nonisolated(unsafe) static var isActive = false
+}

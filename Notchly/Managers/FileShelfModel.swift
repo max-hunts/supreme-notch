@@ -63,4 +63,9 @@ final class FileShelfModel: ObservableObject {
     private func save() {
         UserDefaults.standard.set(items.map(\.url.path), forKey: Self.defaultsKey)
     }
+
+    #if DEBUG
+    /// Sample data for README images; not saved.
+    func previewLoad(_ urls: [URL]) { items = urls.map(ShelfItem.init(url:)) }
+    #endif
 }

@@ -530,7 +530,7 @@ final class FocusManager: ObservableObject {
     // MARK: - DND private API
 
     private var dndClientIdentifier: String {
-        Bundle.main.bundleIdentifier ?? "xyz.notchly.Notchly"
+        Bundle.main.bundleIdentifier ?? "com.maxhunt.betternotch"
     }
 
     private func installDNDStateServiceListener() {

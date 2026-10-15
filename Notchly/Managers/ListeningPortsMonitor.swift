@@ -317,4 +317,9 @@ final class ListeningPortsMonitor: ObservableObject {
         guard !path.isEmpty, path != "/", path != home else { return nil }
         return URL(fileURLWithPath: path).lastPathComponent
     }
+
+    #if DEBUG
+    /// Sample data for README images.
+    func previewLoad(_ ports: [ListeningPort]) { self.ports = ports }
+    #endif
 }

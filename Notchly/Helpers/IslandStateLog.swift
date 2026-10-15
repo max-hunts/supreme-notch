@@ -10,7 +10,7 @@ import Foundation
 
 enum IslandStateLog {
     private static let url = FileManager.default.homeDirectoryForCurrentUser
-        .appendingPathComponent("Library/Application Support/Notchly/island-state.log")
+        .appendingPathComponent("Library/Application Support/BetterNotch/island-state.log")
     private static let formatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateFormat = "HH:mm:ss.SSS"

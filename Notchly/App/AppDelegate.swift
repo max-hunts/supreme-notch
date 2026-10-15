@@ -9,7 +9,13 @@ import AppKit
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let environment = AppEnvironment()
+    // The rename migration must run before any manager reads its settings.
+    private let environment: AppEnvironment = {
+        if !ProcessInfo.processInfo.arguments.contains("-renderReadmeImages") {
+            LegacyIdentityMigration.runIfNeeded()
+        }
+        return AppEnvironment()
+    }()
     private var startupTask: Task<Void, Never>?
     private var didValidateSingleInstance = false
 
@@ -36,6 +42,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     )
 
     func applicationWillFinishLaunching(_ notification: Notification) {
+        #if DEBUG
+        if let directory = ReadmeImageRenderer.outputDirectory {
+            ReadmeImageRenderer.render(environment: environment, to: directory)
+            exit(0)
+        }
+        #endif
         guard validateSingleRunningInstance() else { return }
         environment.lockScreenWallpaperManager.recoverSynchronously()
         environment.lockScreenWallpaperManager.refreshCachedDesktopWallpapers()

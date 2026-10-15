@@ -44,7 +44,7 @@ struct AboutSettingsView: View {
                 .shadow(color: .black.opacity(0.18), radius: 12, y: 5)
 
             VStack(spacing: 4) {
-                Text("Notchly")
+                Text("BetterNotch")
                     .font(.system(size: 22, weight: .bold))
 
                 Text("Turn your MacBook notch into a useful, interactive space.")

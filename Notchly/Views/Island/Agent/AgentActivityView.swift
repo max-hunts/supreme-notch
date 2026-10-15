@@ -141,7 +141,7 @@ private struct AgentApprovalContent: View {
     let onDecision: ((AgentApprovalRequest, AgentApprovalDecision) -> Void)?
 
     /// Short delay so a click that was already on its way cannot approve a request.
-    @State private var isArmed = false
+    @State private var isArmed = SnapshotRendering.isActive
     @State private var isResolving = false
 
     /// Claude requests use Claude's orange, like the other agent notices.
@@ -222,7 +222,7 @@ private struct AgentApprovalContent: View {
         }
         .padding(.top, 4)
         .onAppear {
-            isArmed = false
+            isArmed = SnapshotRendering.isActive
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(450))
                 isArmed = true
@@ -453,7 +453,7 @@ private struct GlanceWithButtons: View {
     let event: AgentEvent
     let detail: String
     let onButton: ((AgentEvent, GlanceButton) -> Void)?
-    @State private var isArmed = false
+    @State private var isArmed = SnapshotRendering.isActive
 
     /// Claude alerts use Claude's orange; other glances keep the system blue.
     private var primaryColor: Color {
@@ -507,7 +507,7 @@ private struct GlanceWithButtons: View {
         }
         .padding(.top, 4)
         .onAppear {
-            isArmed = false
+            isArmed = SnapshotRendering.isActive
             Task { @MainActor in
                 try? await Task.sleep(for: .milliseconds(450))
                 isArmed = true

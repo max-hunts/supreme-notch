@@ -10,8 +10,8 @@ import Security
 import Darwin
 
 private enum IdentityHelperConstants {
-    static let machServiceName = "xyz.notchly.Notchly.IdentityHelper"
-    static let mainApplicationIdentifier = "xyz.notchly.Notchly"
+    static let machServiceName = "com.maxhunt.betternotch.IdentityHelper"
+    static let mainApplicationIdentifier = "com.maxhunt.betternotch"
     static let loginWindowPreferences = URL(
         fileURLWithPath: "/Library/Preferences/com.apple.loginwindow.plist"
     )
@@ -52,7 +52,7 @@ private struct IdentityPreferenceBaseline {
 
 private final class IdentityPreferenceController: @unchecked Sendable {
     private let queue = DispatchQueue(
-        label: "xyz.notchly.identity-helper.preferences",
+        label: "com.maxhunt.betternotch.identity-helper.preferences",
         qos: .userInitiated
     )
     private var activeLeases = Set<UUID>()
@@ -253,7 +253,7 @@ private final class IdentityHelperService: NSObject, IdentityHelperProtocol {
 private final class IdentityHelperListenerDelegate: NSObject, NSXPCListenerDelegate, @unchecked Sendable {
     private let controller = IdentityPreferenceController()
     private let connectionStateQueue = DispatchQueue(
-        label: "xyz.notchly.identity-helper.connections"
+        label: "com.maxhunt.betternotch.identity-helper.connections"
     )
     private var activeConnectionCount = 0
     private var exitGeneration = UUID()

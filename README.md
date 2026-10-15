@@ -2,7 +2,7 @@
   <img src="Notchly/Resources/Assets.xcassets/AppIcon.appiconset/logo_256x256.png" width="96" height="96" alt="App icon">
 </p>
 
-<h1 align="center">Better Notch</h1>
+<h1 align="center">BetterNotch</h1>
 
 <p align="center">
   A native macOS app that turns the MacBook notch into a status bar, an agent console and a scratch space.
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License">
 </p>
 
-Better Notch is a fork of [Notchly](https://github.com/Notchly/Notchly) (MIT). The app still builds and installs as **Notchly.app**, with the same bundle ID, so settings carry over.
+BetterNotch is a fork of [Notchly](https://github.com/Notchly/Notchly) (MIT), renamed and maintained by Max Hunt. If you are coming from Notchly, the first launch copies your settings, usage keys and agent hooks across.
 
 ## At a glance
 
@@ -29,10 +29,10 @@ The closed notch stays out of the way. The camera sits in the middle, with a sma
 - **Muted mic.** A red slashed mic appears next to the camera whenever your microphone is muted.
 
 <p align="center">
-  <img src="docs/images/status-ring.png" width="560" alt="Status ring states: Wi-Fi, weak Wi-Fi, charging, Ethernet, offline with low battery">
+  <img src="docs/images/status-ring.png" width="580" alt="The status ring explained: outer arc is battery, center is network, four dots are volume; with Wi-Fi, weak Wi-Fi, charging, Ethernet and offline with low battery examples">
 </p>
 
-The ring turns green while charging, red when the battery is low and yellow in Low Power Mode. Charging color changes the moment you plug in or unplug.
+Charging color changes the moment you plug in or unplug.
 
 <p align="center">
   <img src="docs/images/usage-colors.png" width="460" alt="Usage color scales for Claude and Codex">
@@ -45,10 +45,21 @@ Claude's bars run cold to hot, from blue through white to red. Codex's run green
 Click the notch, or just hover over it, to open it.
 
 <p align="center">
-  <img src="docs/images/opened-battery.png" width="470" alt="The opened notch with a large status ring">
+  <img src="docs/images/opened-notch.png" width="440" alt="The opened notch: a large status ring with the battery percentage and a mic button, above the Agents tab listing four coding sessions">
 </p>
 
 The top shows a large status ring with the battery percentage, plus a mic mute button. Below it is a row of tabs. Swipe or click to switch tabs, and the notch resizes to fit each one.
+
+<table>
+  <tr>
+    <td><img src="docs/images/tab-usage.png" alt="Usage tab: Claude 5-hour, weekly and model limits, plus Codex, with reset times"></td>
+    <td><img src="docs/images/tab-system.png" alt="System tab: CPU, memory and disk rings and a 5-minute network chart"></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/tab-ports.png" alt="Ports tab: local servers with their port, process and project"></td>
+    <td><img src="docs/images/tab-shelf.png" alt="Shelf tab: files dropped into the notch"></td>
+  </tr>
+</table>
 
 | Tab | What it shows |
 |---|---|
@@ -60,14 +71,24 @@ The top shows a large status ring with the battery percentage, plus a mic mute b
 | Note | A quick scratch note that stays between launches. |
 | Output | Switch the audio output device. |
 
+<p align="center">
+  <img src="docs/images/tab-output.png" width="400" alt="Output tab: built-in speakers, AirPods Pro and Studio Display, with AirPods selected">
+</p>
+
 ## Agent alerts
 
-Better Notch installs small hooks into Claude Code, Codex and Cursor, and shows their events in the notch:
+BetterNotch installs small hooks into Claude Code, Codex and Cursor, and shows their events in the notch:
 
 - **Approvals.** Approve or deny a tool request from the notch, or hand it back to the agent's own prompt.
 - **Questions.** When an agent asks you a question, the notch shows it with an Open session button. Questions never get an Approve button.
 - **Finished turns.** A short summary of what the agent did, with Open session.
 - **No interruptions.** Alerts wait while you are using the opened notch, and every alert has an X to dismiss it.
+
+<p align="center">
+  <img src="docs/images/notice-approval.png" width="300" alt="Approval alert with Deny, In Claude and Approve buttons">
+  <img src="docs/images/notice-question.png" width="300" alt="Question alert with an Open session button">
+  <img src="docs/images/notice-finished.png" width="300" alt="Finished turn alert with a summary and an Open session button">
+</p>
 
 ## Glances
 
@@ -86,9 +107,11 @@ Short notices that slide out of the notch and go away on their own:
 
 ## Install
 
-1. Download the latest `Notchly-<version>.zip` from [Releases](../../releases).
-2. Unzip it and move **Notchly.app** to Applications.
+1. Download the latest `BetterNotch-<version>.zip` from [Releases](../../releases).
+2. Unzip it and move **BetterNotch.app** to Applications. If you still have Notchly.app, quit it and move it to the Trash first.
 3. Open it. The build is signed with a Developer ID and notarized by Apple.
+
+When moving from Notchly, macOS asks once per saved usage key for permission to copy it, and Calendar, Bluetooth, Automation and Downloads access need granting again because the app has a new identity.
 
 Automatic updates are turned off in this fork for now, so install new releases by hand.
 
@@ -108,11 +131,13 @@ A Release build needs the usage monitor copied into the app after export, then t
 
 ```sh
 cargo build --release --manifest-path ../claude-usage-monitor/Cargo.toml
-cp ../claude-usage-monitor/target/release/claude-usage-monitor Notchly.app/Contents/Helpers/
-codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" Notchly.app/Contents/Helpers/claude-usage-monitor
+cp ../claude-usage-monitor/target/release/claude-usage-monitor BetterNotch.app/Contents/Helpers/
+codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" BetterNotch.app/Contents/Helpers/claude-usage-monitor
 codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" \
-  --preserve-metadata=entitlements,requirements,flags,runtime Notchly.app
+  --preserve-metadata=entitlements,requirements,flags,runtime BetterNotch.app
 ```
+
+The README images are drawn by the app's own views with sample data. In a Debug build, run `BetterNotch.app/Contents/MacOS/BetterNotch -renderReadmeImages <folder>` to regenerate the tab and alert images.
 
 ## Credits
 
@@ -124,4 +149,4 @@ codesign --force --options runtime --timestamp --sign "Developer ID Application:
 
 ## License
 
-MIT. See [LICENSE](LICENSE). The original Notchly copyright notice is kept as the license requires.
+MIT. See [LICENSE](LICENSE). The original Notchly copyright notice is kept alongside Max Hunt's, as the license requires.

@@ -79,7 +79,7 @@ final class NetworkStatusManager: NSObject, ObservableObject {
 
     private let wifiClient = CWWiFiClient.shared()
     private let monitorQueue = DispatchQueue(
-        label: "xyz.notchly.network-path-monitor",
+        label: "com.maxhunt.betternotch.network-path-monitor",
         qos: .utility
     )
 

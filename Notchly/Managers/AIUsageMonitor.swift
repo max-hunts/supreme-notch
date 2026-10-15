@@ -236,4 +236,9 @@ final class AIUsageMonitor: ObservableObject {
         }
         return .success(Data(data))
     }
+
+    #if DEBUG
+    /// Sample data for README images.
+    func previewLoad(_ snapshot: AIUsageSnapshot) { state = .loaded(snapshot) }
+    #endif
 }

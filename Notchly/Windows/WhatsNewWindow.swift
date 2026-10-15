@@ -82,7 +82,7 @@ final class WhatsNewWindow: NSObject, NSWindowDelegate {
 
         window.delegate = self
         window.center()
-        window.title = "What's New in Notchly"
+        window.title = "What's New in BetterNotch"
         window.isReleasedWhenClosed = false
         window.titlebarAppearsTransparent = true
         window.titleVisibility = .hidden

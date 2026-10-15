@@ -938,7 +938,7 @@ final class AgentEventManager: ObservableObject {
         case .deny:
             body = ["hookSpecificOutput": [
                 "hookEventName": "PermissionRequest",
-                "decision": ["behavior": "deny", "message": "Denied from Notchly."]
+                "decision": ["behavior": "deny", "message": "Denied from BetterNotch."]
             ]]
         case .answerInTerminal:
             body = ["release": true]

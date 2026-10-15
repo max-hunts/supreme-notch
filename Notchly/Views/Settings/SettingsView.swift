@@ -48,7 +48,7 @@ struct SettingsView: View {
                     )
 
                     sidebarGroup(
-                        title: "Notchly",
+                        title: "BetterNotch",
                         sections: [.about]
                     )
                 }

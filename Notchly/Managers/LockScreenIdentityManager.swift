@@ -30,8 +30,8 @@ enum LockScreenIdentityAuthorizationState: Equatable {
 @MainActor
 final class LockScreenIdentityManager: ObservableObject {
     private enum Constants {
-        static let helperIdentifier = "xyz.notchly.Notchly.IdentityHelper"
-        static let daemonPlistName = "xyz.notchly.Notchly.IdentityHelper.plist"
+        static let helperIdentifier = "com.maxhunt.betternotch.IdentityHelper"
+        static let daemonPlistName = "com.maxhunt.betternotch.IdentityHelper.plist"
         static let enhancedUserInterfaceAttribute = "AXEnhancedUserInterface" as CFString
     }
 
@@ -301,7 +301,7 @@ final class LockScreenIdentityManager: ObservableObject {
 
         let alert = NSAlert()
         alert.alertStyle = .critical
-        alert.messageText = "Notchly couldn’t install its Lock Screen helper"
+        alert.messageText = "BetterNotch couldn’t install its Lock Screen helper"
         alert.informativeText = error.localizedDescription
         alert.addButton(withTitle: "OK")
         alert.runModal()
@@ -332,9 +332,9 @@ final class LockScreenIdentityManager: ObservableObject {
 
         let alert = NSAlert()
         alert.alertStyle = .informational
-        alert.messageText = "Allow Notchly to hide the Lock Screen profile"
+        alert.messageText = "Allow BetterNotch to hide the Lock Screen profile"
         alert.informativeText = "macOS needs a one-time administrator approval. "
-            + "Notchly will only hide your photo and name while expanded artwork is visible."
+            + "BetterNotch will only hide your photo and name while expanded artwork is visible."
         alert.addButton(withTitle: "Open System Settings")
         alert.addButton(withTitle: "Not Now")
 

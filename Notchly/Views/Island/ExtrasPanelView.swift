@@ -298,11 +298,13 @@ struct ExtrasPanelView: View {
         }
         .padding(.horizontal, 16)
         .frame(width: width, alignment: .topLeading)
-        .background(
-            ScrollSwipeCatcher(onScrollEvent: { event in
-                handleSwipe(event, tabs: tabs, selected: selected)
-            })
-        )
+        .background {
+            if !SnapshotRendering.isActive {
+                ScrollSwipeCatcher(onScrollEvent: { event in
+                    handleSwipe(event, tabs: tabs, selected: selected)
+                })
+            }
+        }
     }
 
     /// Two-finger sideways swipe moves exactly one tab per gesture. Momentum after the

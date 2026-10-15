@@ -46,7 +46,7 @@ nonisolated enum UsageCredentialField: String, CaseIterable, Identifiable {
 }
 
 nonisolated enum UsageCredentialStore {
-    private static let service = "Notchly AI Usage"
+    private static let service = "BetterNotch AI Usage"
 
     static func value(_ field: UsageCredentialField) -> String? {
         let query: [String: Any] = [
@@ -78,6 +78,25 @@ nonisolated enum UsageCredentialStore {
         // Readable only on this Mac while it is unlocked; never synced to iCloud.
         item[kSecAttrAccessible as String] = kSecAttrAccessibleWhenUnlockedThisDeviceOnly
         SecItemAdd(item as CFDictionary, nil)
+    }
+
+    /// Copies keys saved before the app was renamed from Notchly. macOS may ask once per
+    /// key, because the old app owns those Keychain items. The old items are left alone.
+    static func migrateLegacyKeys() {
+        for field in UsageCredentialField.allCases where value(field) == nil {
+            let query: [String: Any] = [
+                kSecClass as String: kSecClassGenericPassword,
+                kSecAttrService as String: "Notchly AI Usage",
+                kSecAttrAccount as String: field.rawValue,
+                kSecReturnData as String: true,
+                kSecMatchLimit as String: kSecMatchLimitOne
+            ]
+            var result: AnyObject?
+            guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+                  let data = result as? Data,
+                  let text = String(data: data, encoding: .utf8), !text.isEmpty else { continue }
+            set(text, for: field)
+        }
     }
 
     static func hasValue(_ field: UsageCredentialField) -> Bool {

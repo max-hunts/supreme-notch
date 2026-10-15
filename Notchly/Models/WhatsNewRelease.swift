@@ -31,7 +31,7 @@ struct WhatsNewRelease {
                 Feature(
                     id: "personal-hotspot",
                     title: "Personal Hotspot alerts",
-                    description: "Notchly now recognizes Personal Hotspot connections and lets you know when internet access is restored."
+                    description: "BetterNotch now recognizes Personal Hotspot connections and lets you know when internet access is restored."
                 ),
                 Feature(
                     id: "network-transitions",

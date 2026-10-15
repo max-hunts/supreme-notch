@@ -63,7 +63,7 @@ final class MusicManager: ObservableObject {
     private var appTerminationObserver: NSObjectProtocol?
     private var isStarted = false
     private let artworkProcessingQueue = DispatchQueue(
-        label: "xyz.notchly.artwork-processing",
+        label: "com.maxhunt.betternotch.artwork-processing",
         qos: .userInitiated
     )
     private let artworkProcessingState = ArtworkProcessingState()

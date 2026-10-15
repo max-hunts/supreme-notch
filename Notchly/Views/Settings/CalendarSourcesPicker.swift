@@ -61,7 +61,7 @@ struct CalendarSourcesPicker: View {
                 }
             }
 
-            Text("To use Google Calendar, add your Google account in Internet Accounts with Calendars on. It then shows up here; Notchly never signs in to Google itself.")
+            Text("To use Google Calendar, add your Google account in Internet Accounts with Calendars on. It then shows up here; BetterNotch never signs in to Google itself.")
                 .font(.system(size: 11.5))
                 .foregroundStyle(.secondary)
                 .fixedSize(horizontal: false, vertical: true)

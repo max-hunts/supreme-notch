@@ -67,12 +67,14 @@ struct PortsListView: View {
                         endPoint: .bottom
                     )
                 )
-                .background(
-                    ScrollSwipeCatcher { _, deltaY in
-                        guard overflows else { return }
-                        scrollOffset = min(max(scrollOffset - deltaY, 0), maxOffset)
+                .background {
+                    if !SnapshotRendering.isActive {
+                        ScrollSwipeCatcher { _, deltaY in
+                            guard overflows else { return }
+                            scrollOffset = min(max(scrollOffset - deltaY, 0), maxOffset)
+                        }
                     }
-                )
+                }
             }
         }
         .onAppear { monitor.startLive() }

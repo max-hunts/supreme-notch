@@ -182,7 +182,7 @@ final class CursorHookIntegrationManager: ObservableObject {
 set -eu
 
 event_type="${1:-completed}"
-events_dir="$HOME/Library/Application Support/Notchly"
+events_dir="$HOME/Library/Application Support/BetterNotch"
 events_file="$events_dir/agent-events.jsonl"
 
 mkdir -p "$events_dir"
@@ -231,11 +231,11 @@ printf '{"source":"cursor","type":"%s","title":"%s","message":"%s","ttl":3}\\n' 
     private var hookDirectoryURL: URL {
         fileManager
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Notchly", isDirectory: true)
+            .appendingPathComponent("BetterNotch", isDirectory: true)
             .appendingPathComponent("bin", isDirectory: true)
     }
 
     private var hookScriptURL: URL {
-        hookDirectoryURL.appendingPathComponent("notchly-cursor-hook")
+        hookDirectoryURL.appendingPathComponent("betternotch-cursor-hook")
     }
 }

@@ -30,7 +30,7 @@ final class CodexHookIntegrationManager: ObservableObject {
             let timeout = handler.timeout.map { "  timeout \($0)s" } ?? ""
             return "\(handler.event): \(handler.command)\(timeout)"
         }
-        return (["~/.codex/hooks.json"] + lines + ["", "After installing, run /hooks in Codex once and trust the Notchly entries."])
+        return (["~/.codex/hooks.json"] + lines + ["", "After installing, run /hooks in Codex once and trust the BetterNotch entries."])
             .joined(separator: "\n")
     }
 
@@ -66,6 +66,12 @@ final class CodexHookIntegrationManager: ObservableObject {
     /// Moves an earlier config.toml install to hooks.json and refreshes the script.
     /// Does nothing if Notchly's Codex hooks were never installed.
     func migrateIfNeeded() {
+        // Entries from before the rename point at Notchly's folder: replace them.
+        let legacyScript = AgentHookPaths.legacyBinDirectoryURL.appendingPathComponent("notchly-codex-hook").path
+        if config.mentions(legacyScript) {
+            install()
+            return
+        }
         let legacy = (try? String(contentsOf: legacyConfigURL, encoding: .utf8))?.contains(hookScriptURL.path) ?? false
         guard legacy || config.mentions(hookScriptURL.path) else { return }
         guard legacy || !isHookInstalled() || scriptIsOutdated else { return }
@@ -118,7 +124,7 @@ final class CodexHookIntegrationManager: ObservableObject {
     }
 
     private var hookScriptURL: URL {
-        AgentHookPaths.binDirectoryURL.appendingPathComponent("notchly-codex-hook")
+        AgentHookPaths.binDirectoryURL.appendingPathComponent("betternotch-codex-hook")
     }
 
     // MARK: - Legacy config.toml cleanup
@@ -134,7 +140,7 @@ final class CodexHookIntegrationManager: ObservableObject {
         let cleaned = Self.removingManagedBlocks(from: original, marker: hookScriptURL.path)
         guard cleaned != original else { return }
 
-        let backupURL = legacyConfigURL.appendingPathExtension("notchly-backup")
+        let backupURL = legacyConfigURL.appendingPathExtension("betternotch-backup")
         try? fileManager.removeItem(at: backupURL)
         try fileManager.copyItem(at: legacyConfigURL, to: backupURL)
         try cleaned.write(to: legacyConfigURL, atomically: true, encoding: .utf8)

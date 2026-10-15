@@ -21,7 +21,15 @@ enum AgentHookPaths {
     static var baseDirectoryURL: URL {
         FileManager.default
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("BetterNotch", isDirectory: true)
+    }
+
+    /// Where hooks lived before the app was renamed from Notchly.
+    static var legacyBinDirectoryURL: URL {
+        FileManager.default
+            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Notchly", isDirectory: true)
+            .appendingPathComponent("bin", isDirectory: true)
     }
 
     static var binDirectoryURL: URL {
@@ -70,7 +78,7 @@ enum AgentHookPaths {
 
 enum AgentHookScript {
     static let version = 4
-    static let versionMarker = "# notchly-hook-version: \(version)"
+    static let versionMarker = "# betternotch-hook-version: \(version)"
 
     /// - Parameters:
     ///   - source: "claude" or "codex", written into every event.
@@ -79,13 +87,13 @@ enum AgentHookScript {
         """
 #!/bin/sh
 \(versionMarker)
-# Managed by Notchly. Reinstall from Settings > AI Agents instead of editing.
-# Local only: writes small files under ~/Library/Application Support/Notchly.
+# Managed by BetterNotch. Reinstall from Settings > AI Agents instead of editing.
+# Local only: writes small files under ~/Library/Application Support/BetterNotch.
 umask 077
 
 source_name="\(source)"
 event_type="${1:-completed}"
-base="$HOME/Library/Application Support/Notchly"
+base="$HOME/Library/Application Support/BetterNotch"
 events_file="$base/agent-events.jsonl"
 requests_dir="$base/requests"
 decisions_dir="$base/decisions"
@@ -101,7 +109,7 @@ emit() {
     "$source_name" "$1" "$2" "$3" "${4:-}" "${5:-}" "${sid:-}" "${tool:-}" "${hook_event:-}" "${cwd:-}" "${step:-}" "${PPID:-0}" >> "$events_file"
 }
 
-notchly_running() { /usr/bin/pgrep -qx Notchly; }
+notchly_running() { /usr/bin/pgrep -qx BetterNotch; }
 
 payload=$(cat)
 sid=$(clean "$(field session_id)")
@@ -155,7 +163,7 @@ case "$event_type" in
           cat "$decision_file"
         fi
         rm -f "$request_file" "$decision_file"
-        # Tell Notchly the request is settled, whoever wrote the decision.
+        # Tell BetterNotch the request is settled, whoever wrote the decision.
         emit clear "" "" "$id"
         exit 0
       fi
@@ -341,7 +349,7 @@ struct AgentHookJSONConfig {
 
     private func write(_ root: [String: Any]) throws {
         if fileManager.fileExists(atPath: fileURL.path) {
-            let backupURL = fileURL.appendingPathExtension("notchly-backup")
+            let backupURL = fileURL.appendingPathExtension("betternotch-backup")
             try? fileManager.removeItem(at: backupURL)
             try? fileManager.copyItem(at: fileURL, to: backupURL)
         }

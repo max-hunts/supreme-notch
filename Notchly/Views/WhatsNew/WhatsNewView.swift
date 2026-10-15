@@ -57,7 +57,7 @@ struct WhatsNewView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
 
             VStack(spacing: 5) {
-                Text("What's New in Notchly")
+                Text("What's New in BetterNotch")
                     .font(.system(size: 27, weight: .bold, design: .rounded))
 
                 Text("Version \(release.version)")

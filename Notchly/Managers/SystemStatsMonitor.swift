@@ -178,4 +178,12 @@ final class SystemStatsMonitor: ObservableObject {
         }
         return (received, sent)
     }
+
+    #if DEBUG
+    /// Sample data for README images.
+    func previewLoad(stats: SystemStats, history: [NetworkSample]) {
+        self.stats = stats
+        networkHistory = history
+    }
+    #endif
 }

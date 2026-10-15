@@ -185,4 +185,12 @@ final class AudioOutputManager: ObservableObject {
             return AudioOutputDevice(id: id, name: deviceName, transport: transport)
         }
     }
+
+    #if DEBUG
+    /// Sample data for README images.
+    func previewLoad(_ devices: [AudioOutputDevice], defaultID: AudioDeviceID) {
+        self.devices = devices
+        defaultDeviceID = defaultID
+    }
+    #endif
 }

@@ -53,7 +53,7 @@ struct GeneralSettingsView: View {
 
                     SettingsToggleRow(
                         title: "Launch at Login",
-                        subtitle: "Open Notchly automatically when you sign in.",
+                        subtitle: "Open BetterNotch automatically when you sign in.",
                         isOn: $settingsManager.launchAtLogin
                     )
 
@@ -140,11 +140,11 @@ private struct LockScreenProfileSettingsRow: View {
         case .enabled:
             return "Your photo and name are hidden while expanded artwork is visible."
         case .needsApproval:
-            return "Allow Notchly in Login Items to hide your profile during expanded artwork."
+            return "Allow BetterNotch in Login Items to hide your profile during expanded artwork."
         case .disabled:
             return "Enable the background helper used only while expanded artwork is visible."
         case .unavailable:
-            return "Move Notchly to Applications before enabling the Lock Screen helper."
+            return "Move BetterNotch to Applications before enabling the Lock Screen helper."
         }
     }
 
@@ -482,7 +482,7 @@ private struct AgentHookIntegrationRow<Manager: AgentHookIntegrationManaging>: V
 
             if isPreviewVisible {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Hooks run locally and nothing leaves this Mac. For approvals Notchly reads the requested tool and its input to show a summary. For completion summaries it reads the agent's final message from the local transcript.")
+                    Text("Hooks run locally and nothing leaves this Mac. For approvals BetterNotch reads the requested tool and its input to show a summary. For completion summaries it reads the agent's final message from the local transcript.")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -565,7 +565,7 @@ private struct DisplayTargetPicker: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.primary)
 
-                Text("Choose where Notchly appears.")
+                Text("Choose where BetterNotch appears.")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.secondary)
             }

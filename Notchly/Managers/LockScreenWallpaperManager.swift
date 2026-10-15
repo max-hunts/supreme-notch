@@ -51,7 +51,7 @@ final class LockScreenWallpaperManager {
     private let workspace = NSWorkspace.shared
     private let renderer = LockScreenBackdropRenderer(maximumSide: 2560)
     private let renderQueue = DispatchQueue(
-        label: "xyz.notchly.lock-screen-wallpaper",
+        label: "com.maxhunt.betternotch.lock-screen-wallpaper",
         qos: .userInitiated
     )
     private let fileManager = FileManager.default
@@ -93,7 +93,7 @@ final class LockScreenWallpaperManager {
         let applicationSupport = fileManager
             .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         workingDirectoryURL = applicationSupport
-            .appendingPathComponent("Notchly/LockScreenWallpaper", isDirectory: true)
+            .appendingPathComponent("BetterNotch/LockScreenWallpaper", isDirectory: true)
         recoveryURL = workingDirectoryURL.appendingPathComponent("restore.json")
         wallpaperStoreIndexURL = applicationSupport
             .appendingPathComponent("com.apple.wallpaper/Store/Index.plist")

@@ -49,10 +49,10 @@ struct AIUsageSettingsView: View {
 
     private var monitorDescription: String {
         guard let url = AIUsageMonitor.binaryURL() else {
-            return "Not found. Build claude-usage-monitor or reinstall Notchly."
+            return "Not found. Build claude-usage-monitor or reinstall BetterNotch."
         }
         if url.path.hasPrefix(Bundle.main.bundlePath) {
-            return "Built in: claude-usage-monitor (Rust), signed and bundled with Notchly."
+            return "Built in: claude-usage-monitor (Rust), signed and bundled with BetterNotch."
         }
         return "Using the installed copy at \(url.path)."
     }

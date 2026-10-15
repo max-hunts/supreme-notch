@@ -279,4 +279,9 @@ final class AgentSessionTracker: ObservableObject {
         guard proc_pidinfo(pid, PROC_PIDTBSDINFO, 0, &info, size) == size else { return nil }
         return pid_t(info.pbi_ppid)
     }
+
+    #if DEBUG
+    /// Sample data for README images.
+    func previewLoad(_ sessions: [AgentSession]) { self.sessions = sessions }
+    #endif
 }

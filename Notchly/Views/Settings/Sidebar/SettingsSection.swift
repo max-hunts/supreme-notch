@@ -74,7 +74,7 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
     var subtitle: String {
         switch self {
         case .general:
-            return "Configure the core Notchly experience."
+            return "Configure the core BetterNotch experience."
         case .focus:
             return "Customize Focus status animations."
         case .brightness:

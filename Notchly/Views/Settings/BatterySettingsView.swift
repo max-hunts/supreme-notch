@@ -28,7 +28,7 @@ struct BatterySettingsView: View {
                                 Text("Low Battery Threshold")
                                     .font(.system(size: 13, weight: .medium))
 
-                                Text("Choose when Notchly should show the low battery state.")
+                                Text("Choose when BetterNotch should show the low battery state.")
                                     .font(.system(size: 12))
                                     .foregroundStyle(.secondary)
                             }
