@@ -14,17 +14,20 @@ struct AgentActivityView: View {
     var onDecision: ((AgentApprovalRequest, AgentApprovalDecision) -> Void)? = nil
     var onGlanceButton: ((AgentEvent, GlanceButton) -> Void)? = nil
 
+    /// How far below the island's top edge the alert is drawn.
+    static let contentTopOffset: CGFloat = 10
+
     /// Island content height for an event, or nil to use the default preview height.
     static func contentHeight(for event: AgentEvent?) -> CGFloat? {
         guard let event else { return nil }
         if let approval = event.approval {
-            return approval.detail == nil ? 132 : 148
+            return approval.detail == nil ? 140 : 156
         }
         if !event.batteryParts.isEmpty || event.progressKey != nil {
             return 92
         }
         if event.detail != nil && !event.buttons.isEmpty {
-            return 132
+            return 140
         }
         if event.detail != nil {
             return 98
@@ -41,11 +44,11 @@ struct AgentActivityView: View {
                     pendingCount: pendingCount,
                     onDecision: onDecision
                 )
-                .padding(.horizontal, 14)
+                .padding(.horizontal, IslandMetrics.edgeInset)
                 .frame(width: size.width, height: size.height, alignment: .top)
             } else if let event, let progressKey = event.progressKey {
                 DownloadProgressContent(event: event, progressKey: progressKey)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, IslandMetrics.edgeInset)
                     .frame(width: size.width, height: size.height, alignment: .top)
                     .allowsHitTesting(false)
             } else if let event, !event.batteryParts.isEmpty {
@@ -79,12 +82,12 @@ struct AgentActivityView: View {
                         }
                     }
                 }
-                .padding(.horizontal, 14)
+                .padding(.horizontal, IslandMetrics.edgeInset)
                 .frame(width: size.width, height: size.height, alignment: .top)
                 .allowsHitTesting(false)
             } else if let event, let detail = event.detail, !event.buttons.isEmpty {
                 GlanceWithButtons(event: event, detail: detail, onButton: onGlanceButton)
-                    .padding(.horizontal, 14)
+                    .padding(.horizontal, IslandMetrics.edgeInset)
                     .frame(width: size.width, height: size.height, alignment: .top)
             } else if let event, let detail = event.detail {
                 VStack(alignment: .leading, spacing: 5) {
@@ -105,7 +108,7 @@ struct AgentActivityView: View {
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                .padding(.horizontal, 14)
+                .padding(.horizontal, IslandMetrics.edgeInset)
                 .frame(width: size.width, height: size.height, alignment: .top)
                 .allowsHitTesting(false)
             } else if let event {
@@ -217,8 +220,10 @@ private struct AgentApprovalContent: View {
                 decisionButton(agentButtonTitle, isPrimary: false, decision: .answerInTerminal)
                 decisionButton("Approve", isPrimary: true, decision: .approve)
             }
-            .frame(height: 28)
-            .padding(.bottom, 16)
+            .frame(height: IslandMetrics.buttonHeight)
+            // The alert is drawn `contentTopOffset` below the island's top, so the bottom
+            // padding adds it back to keep the buttons `edgeInset` from the bottom edge.
+            .padding(.bottom, IslandMetrics.edgeInset + AgentActivityView.contentTopOffset)
         }
         .padding(.top, 4)
         .onAppear {
@@ -245,10 +250,10 @@ private struct AgentApprovalContent: View {
                 .foregroundStyle(isPrimary ? .white : .white.opacity(0.8))
                 .lineLimit(1)
                 .frame(maxWidth: .infinity)
-                .frame(height: 28)
+                .frame(height: IslandMetrics.buttonHeight)
                 .background(isPrimary ? primaryColor : Color.white.opacity(0.1))
-                .clipShape(Capsule())
-                .contentShape(Capsule())
+                .clipShape(RoundedRectangle(cornerRadius: IslandMetrics.noticeButtonRadius, style: .continuous))
+                .contentShape(RoundedRectangle(cornerRadius: IslandMetrics.noticeButtonRadius, style: .continuous))
         }
         .buttonStyle(IslandControlButtonStyle(pressedScale: 0.96, hoverScale: 1.02, hoverBackgroundOpacity: 0.06))
         .opacity(isArmed ? 1 : 0.55)
@@ -493,17 +498,19 @@ private struct GlanceWithButtons: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(button.isPrimary ? .white : .white.opacity(0.8))
                             .frame(maxWidth: .infinity)
-                            .frame(height: 28)
+                            .frame(height: IslandMetrics.buttonHeight)
                             .background(button.isPrimary ? primaryColor : Color.white.opacity(0.1))
-                            .clipShape(Capsule())
-                            .contentShape(Capsule())
+                            .clipShape(RoundedRectangle(cornerRadius: IslandMetrics.noticeButtonRadius, style: .continuous))
+                            .contentShape(RoundedRectangle(cornerRadius: IslandMetrics.noticeButtonRadius, style: .continuous))
                     }
                     .buttonStyle(IslandControlButtonStyle(pressedScale: 0.96, hoverScale: 1.02, hoverBackgroundOpacity: 0.06))
                     .opacity(isArmed ? 1 : 0.55)
                 }
             }
-            .frame(height: 28)
-            .padding(.bottom, 16)
+            .frame(height: IslandMetrics.buttonHeight)
+            // The alert is drawn `contentTopOffset` below the island's top, so the bottom
+            // padding adds it back to keep the buttons `edgeInset` from the bottom edge.
+            .padding(.bottom, IslandMetrics.edgeInset + AgentActivityView.contentTopOffset)
         }
         .padding(.top, 4)
         .onAppear {

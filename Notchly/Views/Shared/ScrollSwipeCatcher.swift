@@ -83,4 +83,6 @@ final class ScrollTrackingView: NSView {
 /// the swipe catcher cannot be drawn there.
 enum SnapshotRendering {
     nonisolated(unsafe) static var isActive = false
+    /// Draws hover highlights on every row, to check their insets in a render.
+    nonisolated(unsafe) static var showsRowHighlights = false
 }

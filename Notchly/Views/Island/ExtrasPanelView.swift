@@ -193,7 +193,7 @@ struct ExtrasPanelView: View {
     static func contentGap(for tab: ExtrasPanelModel.Tab?) -> CGFloat {
         tab == .system ? 10 : 0
     }
-    static let bottomPadding: CGFloat = 12
+    static let bottomPadding: CGFloat = IslandMetrics.edgeInset
     static let agentRowHeight: CGFloat = 24
     static let outputRowHeight: CGFloat = 22
     static let noteHeight: CGFloat = 54
@@ -296,7 +296,7 @@ struct ExtrasPanelView: View {
             .transition(.opacity)
             .id(selected)
         }
-        .padding(.horizontal, 16)
+        .padding(.horizontal, IslandMetrics.contentInset)
         .frame(width: width, alignment: .topLeading)
         .background {
             if !SnapshotRendering.isActive {
@@ -464,7 +464,6 @@ struct MicMuteButton: View {
 
 private struct AgentSessionsListView: View {
     @ObservedObject var tracker: AgentSessionTracker
-    @State private var hoveredID: String?
 
     var body: some View {
         if tracker.sessions.isEmpty {
@@ -480,26 +479,10 @@ private struct AgentSessionsListView: View {
                             tracker.activate(session)
                         } label: {
                             AgentSessionRow(session: session, now: context.date)
-                                .padding(.horizontal, 8)
-                                .frame(height: ExtrasPanelView.agentRowHeight)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                                        .fill(Color.white.opacity(hoveredID == session.id ? 0.1 : 0))
-                                )
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .padding(.horizontal, -8)
-                        .onHover { hovering in
-                            withAnimation(.easeOut(duration: 0.12)) {
-                                if hovering {
-                                    hoveredID = session.id
-                                } else if hoveredID == session.id {
-                                    hoveredID = nil
-                                }
-                            }
-                            if hovering { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
-                        }
+                        .islandHoverRow(height: ExtrasPanelView.agentRowHeight)
                         .help(Text(verbatim: "\(session.sourceLabel) · \(session.displayName) · click to show it"))
                     }
                 }
@@ -667,7 +650,7 @@ private struct AudioOutputListView: View {
                         .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
-                    .frame(height: ExtrasPanelView.outputRowHeight)
+                    .islandHoverRow(height: ExtrasPanelView.outputRowHeight)
                 }
             }
         }

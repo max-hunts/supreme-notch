@@ -31,6 +31,12 @@ enum ReadmeImageRenderer {
             save(PanelCard(environment: environment, tab: tab), as: "panel-\(tab.rawValue).png", in: directory)
         }
 
+        // Spacing check: every row's hover highlight drawn, not used in the README.
+        SnapshotRendering.showsRowHighlights = true
+        environment.extrasPanelModel.choose(.agents)
+        save(Backdrop { OpenedIsland(environment: environment, tab: .agents) }, as: "check-row-highlights.png", in: directory)
+        SnapshotRendering.showsRowHighlights = false
+
         let now = Date()
         let approval = AgentApprovalRequest(
             id: "sample", source: "claude", sessionID: "s1", toolName: "Bash",
@@ -169,7 +175,7 @@ private struct OpenedIsland: View {
         )
         let height = 20 + 132 - 12 + extras
         ZStack(alignment: .top) {
-            UnevenRoundedRectangle(bottomLeadingRadius: 32, bottomTrailingRadius: 32)
+            UnevenRoundedRectangle(bottomLeadingRadius: IslandMetrics.openedRadius, bottomTrailingRadius: IslandMetrics.openedRadius)
                 .fill(Color.black)
                 .frame(width: width, height: height)
 
@@ -241,13 +247,14 @@ private struct NoticeIsland: View {
     var body: some View {
         let size = CGSize(width: 340, height: AgentActivityView.contentHeight(for: event) ?? 68)
         ZStack(alignment: .top) {
-            UnevenRoundedRectangle(bottomLeadingRadius: 24, bottomTrailingRadius: 24)
+            UnevenRoundedRectangle(bottomLeadingRadius: IslandMetrics.noticeRadius, bottomTrailingRadius: IslandMetrics.noticeRadius)
                 .fill(Color.black)
-                .frame(width: size.width, height: size.height + 10)
+                .frame(width: size.width, height: size.height)
             AgentActivityView(event: event, size: size)
-                .offset(y: 10)
+                .offset(y: AgentActivityView.contentTopOffset)
         }
-        .frame(width: size.width, height: size.height + 10, alignment: .top)
+        .frame(width: size.width, height: size.height, alignment: .top)
+        .clipped()
     }
 }
 #endif

@@ -57,7 +57,7 @@ extension ContentView {
                             }
                         )
                         .id(agentPresentationContentKey(for: event))
-                        .offset(y: 10)
+                        .offset(y: AgentActivityView.contentTopOffset)
                         .transition(
                             .asymmetric(
                                 insertion: .agentContentSlide(y: -14),

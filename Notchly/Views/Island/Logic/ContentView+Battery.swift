@@ -131,12 +131,14 @@ extension ContentView {
         .animation(animation, value: usesIdleNotchSize)
         .animation(.smooth(duration: 0.4, extraBounce: 0), value: liveActivityModel.activity)
         .onTapGesture {
-            guard settingsManager.showBattery else { return }
+            // A click opens the notch. Once open, clicks on empty space do nothing; it
+            // closes when the pointer leaves, like the music player.
+            guard settingsManager.showBattery, status != .opened else { return }
 
             autoExpandMusicTask?.cancel()
 
             withAnimation(animation) {
-                status = (status == .opened) ? .closed : .opened
+                status = .opened
             }
         }
     }
