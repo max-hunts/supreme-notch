@@ -265,6 +265,9 @@ private final class IdentityHelperListenerDelegate: NSObject, NSXPCListenerDeleg
         _ listener: NSXPCListener,
         shouldAcceptNewConnection newConnection: NSXPCConnection
     ) -> Bool {
+        // Without a verifiable caller identity this root helper serves nobody.
+        guard let clientRequirement else { return false }
+
         connectionStateQueue.sync {
             activeConnectionCount += 1
             exitGeneration = UUID()
@@ -301,11 +304,17 @@ private final class IdentityHelperListenerDelegate: NSObject, NSXPCListenerDeleg
 }
 
 private enum CodeSigningRequirement {
-    static func requirement(for identifier: String) -> String {
+    /// Nil when the helper cannot read its own team identity. Release builds then
+    /// refuse every connection instead of trusting the bundle identifier alone.
+    static func requirement(for identifier: String) -> String? {
         guard let teamIdentifier = currentTeamIdentifier(), !teamIdentifier.isEmpty else {
+            #if DEBUG
             // Ad-hoc development builds have no team identifier. SMAppService still
             // validates that the daemon belongs to the registered application bundle.
             return "identifier \"\(escaped(identifier))\""
+            #else
+            return nil
+            #endif
         }
 
         return "anchor apple generic and identifier \"\(escaped(identifier))\" "

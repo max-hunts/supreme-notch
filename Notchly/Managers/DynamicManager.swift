@@ -58,8 +58,11 @@ final class DynamicManager: ObservableObject {
             .sink { [weak self] in self?.updateCurrentModule() }
             .store(in: &cancellables)
 
+        // @Published emits before the property changes, so read it on the next main-queue turn.
+        // Otherwise a cleared glance leaves the module stuck on .agent.
         agentEventManager.$currentEvent
             .map { _ in () }
+            .receive(on: DispatchQueue.main)
             .sink { [weak self] in self?.updateCurrentModule() }
             .store(in: &cancellables)
     }
@@ -72,7 +75,9 @@ final class DynamicManager: ObservableObject {
         } else if settingsManager.showMusic && musicManager.hasNowPlayingContent {
             newModule = .music
         } else if settingsManager.showMusic && musicManager.isResolvingNowPlaying {
-            newModule = .none
+            // Waiting to learn what is playing. Keep the battery ring if it is already up,
+            // so a re-check after wake does not leave an empty, unclickable notch.
+            newModule = currentModule == .battery && settingsManager.showBattery ? .battery : .none
         } else if settingsManager.showBattery {
             newModule = .battery
         } else {

@@ -44,7 +44,7 @@ struct SettingsView: View {
 
                     sidebarGroup(
                         title: "Live Activities",
-                        sections: [.music, .codex]
+                        sections: [.music, .codex, .usage, .glances]
                     )
 
                     sidebarGroup(
@@ -255,6 +255,11 @@ struct SettingsView: View {
                 cursorHookIntegrationManager: cursorHookIntegrationManager
             )
             
+        case .glances:
+            GlancesSettingsView(settingsManager: settingsManager)
+        case .usage:
+            AIUsageSettingsView(settingsManager: settingsManager)
+
         case .about:
               AboutSettingsView()
           }
@@ -307,6 +312,10 @@ struct SettingsView: View {
                 settingsManager.resetMusicSettings()
             case .codex:
                 settingsManager.resetCodexSettings()
+            case .glances:
+                settingsManager.resetGlanceSettings()
+            case .usage:
+                settingsManager.showUsageTab = true
             }
         }
     }

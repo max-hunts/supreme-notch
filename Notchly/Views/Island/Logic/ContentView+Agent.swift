@@ -47,7 +47,14 @@ extension ContentView {
                     if showsStandaloneAgentContent && (status == .agentPreview || isStandaloneAgentClosing) {
                         AgentActivityView(
                             event: event,
-                            size: layout.agentPreviewSize
+                            size: layout.agentPreviewSize,
+                            pendingCount: agentEventManager.pendingApprovals.count,
+                            onDecision: { request, decision in
+                                agentEventManager.decide(request, decision)
+                            },
+                            onGlanceButton: { event, button in
+                                agentEventManager.handleGlanceButton(event, button)
+                            }
                         )
                         .id(agentPresentationContentKey(for: event))
                         .offset(y: 10)
@@ -62,14 +69,46 @@ extension ContentView {
                 .frame(width: layout.agentPreviewSize.width + layout.cornerRadius * 2, height: layout.agentPreviewSize.height)
             }
             .overlay {
-                IslandClickCatcher {
-                    openAgentSourceApp(event)
+                if event?.approval == nil && (event?.buttons.isEmpty ?? true) {
+                    IslandClickCatcher {
+                        openAgentSourceApp(event)
+                    }
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if event != nil, event?.approval == nil, showsStandaloneAgentContent, status == .agentPreview {
+                    NoticeCloseButton {
+                        agentEventManager.dismissCurrentEvent()
+                    }
+                    .padding(.top, 12)
+                    .padding(.trailing, layout.cornerRadius + 10)
+                    .transition(.opacity)
                 }
             }
             .animation(animation, value: containerSize.width)
             .animation(animation, value: containerSize.height)
             .animation(animation, value: layout.cornerRadius)
         }
+    }
+}
+
+/// A small X in the corner of a notice. Closes it at once.
+struct NoticeCloseButton: View {
+    let action: () -> Void
+    @State private var isHovered = false
+
+    var body: some View {
+        Button(action: action) {
+            Image(systemName: "xmark")
+                .font(.system(size: 9.5, weight: .bold))
+                .foregroundStyle(.white.opacity(isHovered ? 0.9 : 0.5))
+                .frame(width: 20, height: 20)
+                .background(Circle().fill(Color.white.opacity(isHovered ? 0.18 : 0.1)))
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .onHover { isHovered = $0 }
+        .help(Text("Dismiss"))
     }
 }
 

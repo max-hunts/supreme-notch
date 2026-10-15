@@ -9,21 +9,26 @@ import SwiftUI
 import AppKit
 
 struct ScrollSwipeCatcher: NSViewRepresentable {
-    var onScroll: (CGFloat, CGFloat) -> Void
+    var onScroll: (CGFloat, CGFloat) -> Void = { _, _ in }
+    /// The raw event, for callers that need the gesture phase.
+    var onScrollEvent: ((NSEvent) -> Void)? = nil
 
     func makeNSView(context: Context) -> ScrollTrackingView {
         let view = ScrollTrackingView()
         view.onScroll = onScroll
+        view.onScrollEvent = onScrollEvent
         return view
     }
 
     func updateNSView(_ nsView: ScrollTrackingView, context: Context) {
         nsView.onScroll = onScroll
+        nsView.onScrollEvent = onScrollEvent
     }
 }
 
 final class ScrollTrackingView: NSView {
     var onScroll: ((CGFloat, CGFloat) -> Void)?
+    var onScrollEvent: ((NSEvent) -> Void)?
 
     private var scrollMonitor: Any?
 
@@ -57,6 +62,7 @@ final class ScrollTrackingView: NSView {
             guard self.bounds.contains(pointInView) else { return event }
 
             self.onScroll?(event.scrollingDeltaX, event.scrollingDeltaY)
+            self.onScrollEvent?(event)
             return event
         }
     }

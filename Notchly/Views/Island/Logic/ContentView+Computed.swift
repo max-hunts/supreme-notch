@@ -29,8 +29,149 @@ extension ContentView {
             closedHeight: closedHeight,
             islandWidth: effectiveIslandWidth,
             allowsCompactBaseWidth: musicStartUsesIdleWidth,
-            idleWidthOverride: configuredIdleIslandWidth
+            idleWidthOverride: configuredIdleIslandWidth,
+            agentContentHeight: AgentActivityView.contentHeight(for: activeAgentEvent),
+            openedExtraHeight: showsExtrasPanel ? extrasPanelHeight : 0,
+            wingsTucked: tucksWings,
+            liveActivityExtraWidth: liveActivityExtraWidth,
+            batteryWingWidth: batterySideWingWidth,
+            preferredOpenedWidth: preferredOpenedWidth
         )
+    }
+
+    /// The opened notch sizes itself to the selected tab, so short tabs get a narrower
+    /// island. The music player needs 372 to fit its controls beside the mic button.
+    var preferredOpenedWidth: CGFloat? {
+        guard showsExtrasPanel, let tab = selectedExtrasTab else { return nil }
+        let wanted: CGFloat
+        switch tab {
+        case .agents, .ports, .system, .shelf, .usage:
+            wanted = 384
+        case .note, .output:
+            wanted = 344
+        }
+        return usesMusicLayout ? max(wanted, 372) : wanted
+    }
+
+    /// The mic button for the battery panel or music controls row, when it is turned on.
+    var micButtonAccessory: AnyView? {
+        guard settingsManager.showMicMute, micMuteManager.hasInput else { return nil }
+        return AnyView(MicMuteButton(micMute: micMuteManager))
+    }
+
+    /// The meeting countdown to show in the closed wings, if any. Glances, the charging pop
+    /// and an opened island take precedence.
+    var closedLiveActivity: LiveActivity? {
+        guard status == .closed, activeAgentEvent == nil, !showChargingPop,
+              !isAgentMusicTransitionActive else { return nil }
+        guard let activity = liveActivityModel.activity else { return nil }
+        if usesMusicLayout || dynamicManager.currentModule == .music {
+            return settingsManager.showMusic && musicManager.hasNowPlayingContent ? activity : nil
+        }
+        return dynamicManager.currentModule == .battery && settingsManager.showBattery ? activity : nil
+    }
+
+    /// The battery wings carry a title, so they widen more than the music badge needs.
+    /// Capped so the island stays inside its 456 pt window.
+    var liveActivityExtraWidth: CGFloat {
+        guard closedLiveActivity != nil else { return 0 }
+        let wanted: CGFloat = dynamicManager.currentModule == .music || usesMusicLayout ? 40 : 100
+        let base = min(max(CGFloat(settingsManager.islandWidth), 280), 360)
+        return max(0, min(wanted, 420 - base))
+    }
+
+    var wingWatcherWidth: CGFloat {
+        layout.baseWidth + liveActivityExtraWidth
+    }
+
+    /// The closed battery island shows only the status ring, in a wing right of the camera
+    /// notch; its left edge stays flush with the notch.
+    var usesBatterySideWing: Bool {
+        status == .closed && closedLiveActivity == nil && !usesIdleNotchSize && !tucksWings
+    }
+
+    /// The ring's wing, right of the camera.
+    var batterySideWingWidth: CGFloat {
+        CompactBatteryView.wingWidth(closedHeight: closedHeight)
+    }
+
+    var closedMicMuted: Bool {
+        settingsManager.showMicMute && micMuteManager.isMuted
+    }
+
+    /// Subscription usage for the closed notch: Claude's limits, then Codex.
+    var closedUsageBars: [UsageBar] {
+        guard settingsManager.showUsageTab, case let .loaded(snapshot) = aiUsageMonitor.state else { return [] }
+        var bars = snapshot.claude.map { UsageBar(id: $0.label, percent: $0.percent, scale: .claude) }
+        if let codex = snapshot.codex {
+            bars.append(UsageBar(id: codex.label, percent: codex.percent, scale: .codex))
+        }
+        return bars
+    }
+
+    /// The wing left of the camera, for the usage bars and the muted mic.
+    var batteryLeftWingWidth: CGFloat {
+        CompactBatteryView.leftWingWidth(barCount: closedUsageBars.count, micMuted: closedMicMuted)
+    }
+
+    var batterySideWingSize: CGSize {
+        CGSize(width: layout.idleWidth + batterySideWingWidth + batteryLeftWingWidth, height: closedHeight)
+    }
+
+    var batterySideWingOffset: CGFloat {
+        (batterySideWingWidth - batteryLeftWingWidth) / 2
+    }
+
+    /// Shrink the closed island to the camera notch while the pointer is beside it.
+    var tucksWings: Bool {
+        status == .closed && wingsTuckedState && activeAgentEvent == nil && !showChargingPop
+            && !fileDragWatcher.isFileDragActive
+    }
+
+    /// The tabbed panel (agents, ports, note, output) under the battery panel or music player.
+    var showsExtrasPanel: Bool {
+        guard selectedExtrasTab != nil else { return false }
+        if usesMusicLayout {
+            return settingsManager.showMusic && musicManager.hasNowPlayingContent && activeAgentEvent == nil
+        }
+        switch dynamicManager.currentModule {
+        case .battery:
+            return true
+        case .agent:
+            // The battery panel is also the fallback while the module catches up after a glance.
+            return activeAgentEvent == nil && settingsManager.showBattery
+        case .music, .none:
+            return false
+        }
+    }
+
+    var selectedExtrasTab: ExtrasPanelModel.Tab? {
+        extrasPanelModel.resolvedTab(
+            available: extrasPanelModel.availableTabs(settingsManager),
+            activeSessions: sessionTracker.activeCount
+        )
+    }
+
+    var extrasPanelHeight: CGFloat {
+        ExtrasPanelView.height(
+            tab: selectedExtrasTab,
+            sessions: sessionTracker.sessions.count,
+            ports: portsMonitor.panelPorts.count,
+            outputs: audioOutputManager.devices.count,
+            usageRows: aiUsageMonitor.rowCount,
+            shelfItems: fileShelfModel.items.count,
+            hasMeeting: liveActivityModel.activity != nil
+        )
+    }
+
+    /// TEMPORARY: the state that decides what the island shows, for IslandStateLog.
+    var islandStateSnapshot: String {
+        "status=\(status) module=\(dynamicManager.currentModule) lock=\(lockScreenOverlayModel.state)"
+            + " lockIsland=\(presentsLockIsland) idle=\(usesIdleNotchSize) tucked=\(tucksWings)"
+            + " sideWing=\(usesBatterySideWing) chargingPop=\(showChargingPop)"
+            + " resolving=\(musicManager.isResolvingNowPlaying) nowPlaying=\(musicManager.hasNowPlayingContent)"
+            + " agent=\(activeAgentEvent?.kind.rawValue ?? "-")/\(agentEventManager.currentEvent?.kind.rawValue ?? "-")"
+            + " hover=\(isHovered)"
     }
 
     var activeModuleView: some View {
@@ -281,41 +422,6 @@ extension ContentView {
         } else {
             return "Now Playing"
         }
-    }
-
-    var closedIconColor: Color {
-        if batteryManager.isCharging { return .green }
-        if batteryManager.batteryLevel <= settingsManager.lowBatteryThreshold { return .red }
-        return .white
-    }
-
-    var closedTextColor: Color {
-        if batteryManager.batteryLevel <= settingsManager.lowBatteryThreshold && !batteryManager.isCharging {
-            return Color(red: 1.0, green: 0.83, blue: 0.83)
-        }
-        return .white
-    }
-
-    var progressColor: Color {
-        if batteryManager.isCharging { return .green }
-        if batteryManager.batteryLevel <= settingsManager.lowBatteryThreshold { return .red }
-        return .white
-    }
-
-    var batterySymbolName: String {
-        switch batteryManager.batteryLevel {
-        case 0..<10: return "battery.0"
-        case 10..<40: return "battery.25"
-        case 40..<70: return "battery.50"
-        case 70..<90: return "battery.75"
-        default: return "battery.100"
-        }
-    }
-
-    var stateText: String {
-        if batteryManager.isCharging { return "Charging" }
-        if batteryManager.batteryLevel <= settingsManager.lowBatteryThreshold { return "Low Battery" }
-        return "Battery"
     }
 
     var animation: Animation {

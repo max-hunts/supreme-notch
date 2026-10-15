@@ -125,6 +125,18 @@ private struct NetworkStatusContent {
             statusText = "Wi-Fi Turned Off"
             accessibilityLabel = "Wi-Fi off"
             color = Color(red: 1.0, green: 0.48, blue: 0.42)
+        case .ethernetConnected:
+            symbolName = "cable.connector.horizontal"
+            statusSymbolName = "checkmark.circle.fill"
+            statusText = "Ethernet Connected"
+            accessibilityLabel = "Ethernet, connected"
+            color = Color(red: 0.42, green: 0.92, blue: 0.58)
+        case .ethernetDisconnected:
+            symbolName = "cable.connector.horizontal"
+            statusSymbolName = "xmark.circle.fill"
+            statusText = "Ethernet Disconnected"
+            accessibilityLabel = "Ethernet disconnected"
+            color = Color(red: 1.0, green: 0.48, blue: 0.42)
         }
     }
 }

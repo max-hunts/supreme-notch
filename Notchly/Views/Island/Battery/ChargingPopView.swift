@@ -7,30 +7,44 @@
 
 import SwiftUI
 
+/// Shown briefly when power is connected. The island opens on both sides of the camera:
+/// the percentage on the left, and the status ring, now green, where it always sits.
 struct ChargingPopView: View {
     let batteryLevel: Int
-    let symbolName: String
+    let lowBatteryThreshold: Int
+    let network: GlyphNetworkState
+    let volume: Double?
+    let isVolumeMuted: Bool
     let size: CGSize
+    let notchWidth: CGFloat
 
     var body: some View {
-        HStack(spacing: 8) {
-            ZStack {
-                Image(systemName: symbolName)
-                    .font(.system(size: 15, weight: .semibold))
-
-                Image(systemName: "bolt.fill")
-                    .font(.system(size: 9, weight: .bold))
-                    .offset(y: 0.5)
-            }
-
+        let wing = max(0, (size.width - notchWidth) / 2)
+        HStack(spacing: 0) {
             Text("\(batteryLevel)%")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: 14, weight: .bold).monospacedDigit())
+                .foregroundStyle(Color(nsColor: .systemGreen))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(width: wing)
 
-            Text("Charging")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.white.opacity(0.72))
+            Spacer(minLength: notchWidth)
+
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                StatusRingGlyph(
+                    batteryLevel: batteryLevel,
+                    isCharging: true,
+                    lowBatteryThreshold: lowBatteryThreshold,
+                    network: network,
+                    volume: volume,
+                    isMuted: isVolumeMuted,
+                    height: CompactBatteryView.glyphHeight(closedHeight: size.height)
+                )
+            }
+            .padding(.trailing, CompactBatteryView.horizontalInset)
+            .frame(width: wing)
         }
-        .foregroundStyle(.white)
         .frame(width: size.width, height: size.height)
     }
 }

@@ -4,6 +4,10 @@
 //
 //  Created by n0xbyte on 29.05.2026.
 //
+//  Codex reads hooks from ~/.codex/hooks.json (same shape as Claude Code's hooks object).
+//  Earlier Notchly versions appended [[hooks.*]] tables to ~/.codex/config.toml; those
+//  managed blocks are removed on install. Codex asks the user to trust new hooks via /hooks.
+//
 
 import Foundation
 import Combine
@@ -22,31 +26,12 @@ final class CodexHookIntegrationManager: ObservableObject {
     }
 
     var configPreview: String {
-        """
-        [features]
-        hooks = true
-
-        # Notchly Codex alerts
-        [[hooks.Stop]]
-        [[hooks.Stop.hooks]]
-        type = "command"
-        command = '\(completedHookCommand)'
-
-        [[hooks.PermissionRequest]]
-        [[hooks.PermissionRequest.hooks]]
-        type = "command"
-        command = '\(approvalHookCommand)'
-
-        [[hooks.PreToolUse]]
-        [[hooks.PreToolUse.hooks]]
-        type = "command"
-        command = '\(approvedHookCommand)'
-
-        [[hooks.PostToolUse]]
-        [[hooks.PostToolUse.hooks]]
-        type = "command"
-        command = '\(approvedHookCommand)'
-        """
+        let lines = handlers.map { handler in
+            let timeout = handler.timeout.map { "  timeout \($0)s" } ?? ""
+            return "\(handler.event): \(handler.command)\(timeout)"
+        }
+        return (["~/.codex/hooks.json"] + lines + ["", "After installing, run /hooks in Codex once and trust the Notchly entries."])
+            .joined(separator: "\n")
     }
 
     func refreshStatus() {
@@ -58,289 +43,153 @@ final class CodexHookIntegrationManager: ObservableObject {
 
         do {
             try installHookScript()
-            try updateCodexConfig()
+            try removeLegacyConfigBlocks()
+            try config.install(handlers: handlers, managedMarker: hookScriptURL.path)
             refreshStatus()
         } catch {
             installState = .failed(error.localizedDescription)
         }
     }
 
+    func uninstall() {
+        do {
+            try config.uninstall(managedMarker: hookScriptURL.path)
+            try removeLegacyConfigBlocks()
+            try? fileManager.removeItem(at: hookScriptURL)
+        } catch {
+            installState = .failed(error.localizedDescription)
+            return
+        }
+        refreshStatus()
+    }
+
+    /// Moves an earlier config.toml install to hooks.json and refreshes the script.
+    /// Does nothing if Notchly's Codex hooks were never installed.
+    func migrateIfNeeded() {
+        let legacy = (try? String(contentsOf: legacyConfigURL, encoding: .utf8))?.contains(hookScriptURL.path) ?? false
+        guard legacy || config.mentions(hookScriptURL.path) else { return }
+        guard legacy || !isHookInstalled() || scriptIsOutdated else { return }
+        install()
+    }
+
+    private var scriptIsOutdated: Bool {
+        guard let current = try? String(contentsOf: hookScriptURL, encoding: .utf8) else { return true }
+        return current != AgentHookScript.script(source: "codex", displayName: "Codex")
+    }
+
     private func installHookScript() throws {
-        try fileManager.createDirectory(
-            at: hookDirectoryURL,
-            withIntermediateDirectories: true
-        )
-
-        try hookScript.write(to: hookScriptURL, atomically: true, encoding: .utf8)
-        try fileManager.setAttributes(
-            [.posixPermissions: 0o755],
-            ofItemAtPath: hookScriptURL.path
-        )
-    }
-
-    private func updateCodexConfig() throws {
-        try fileManager.createDirectory(
-            at: codexConfigDirectoryURL,
-            withIntermediateDirectories: true
-        )
-
-        var config = ""
-        if fileManager.fileExists(atPath: codexConfigURL.path) {
-            config = try String(contentsOf: codexConfigURL, encoding: .utf8)
-        }
-
-        config = enableCodexHooks(in: config)
-        config = removeManagedHookBlocks(from: config)
-
-        config = appendHookBlockIfNeeded(
-            to: config,
-            eventName: "Stop",
-            command: completedHookCommand
-        )
-
-        config = appendHookBlockIfNeeded(
-            to: config,
-            eventName: "PermissionRequest",
-            command: approvalHookCommand
-        )
-
-        config = appendHookBlockIfNeeded(
-            to: config,
-            eventName: "PreToolUse",
-            command: approvedHookCommand
-        )
-
-        config = appendHookBlockIfNeeded(
-            to: config,
-            eventName: "PostToolUse",
-            command: approvedHookCommand
-        )
-
-        try config.write(to: codexConfigURL, atomically: true, encoding: .utf8)
-    }
-
-    private func removeManagedHookBlocks(from config: String) -> String {
-        let lines = config.components(separatedBy: .newlines)
-        var keptLines: [String] = []
-        var pendingBlock: [String] = []
-        var isCapturingHookBlock = false
-
-        func flushPendingBlock() {
-            guard !pendingBlock.isEmpty else { return }
-
-            if pendingBlock.joined(separator: "\n").contains(hookScriptURL.path) {
-                pendingBlock.removeAll()
-                return
-            }
-
-            keptLines.append(contentsOf: pendingBlock)
-            pendingBlock.removeAll()
-        }
-
-        for line in lines {
-            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
-            let isHookHeader = trimmedLine.hasPrefix("[[hooks.")
-
-            if isHookHeader {
-                flushPendingBlock()
-                isCapturingHookBlock = true
-                pendingBlock.append(line)
-                continue
-            }
-
-            if isCapturingHookBlock {
-                let startsRegularTable = trimmedLine.hasPrefix("[") &&
-                    trimmedLine.hasSuffix("]") &&
-                    !trimmedLine.hasPrefix("[[")
-
-                if startsRegularTable {
-                    flushPendingBlock()
-                    isCapturingHookBlock = false
-                    keptLines.append(line)
-                } else {
-                    pendingBlock.append(line)
-                }
-                continue
-            }
-
-            keptLines.append(line)
-        }
-
-        flushPendingBlock()
-
-        return keptLines
-            .joined(separator: "\n")
-            .replacingOccurrences(of: "\n\n\n", with: "\n\n")
-    }
-
-    private func appendHookBlockIfNeeded(to config: String, eventName: String, command: String) -> String {
-        guard !containsHookCommand(config, eventName: eventName, command: command) else { return config }
-
-        var updatedConfig = config
-        if !updatedConfig.isEmpty, !updatedConfig.hasSuffix("\n") {
-            updatedConfig += "\n"
-        }
-
-        if !updatedConfig.contains("# Notchly Codex alerts") {
-            updatedConfig += "\n# Notchly Codex alerts\n"
-        }
-
-        updatedConfig += """
-[[hooks.\(eventName)]]
-[[hooks.\(eventName).hooks]]
-type = "command"
-command = '\(command)'
-"""
-        updatedConfig += "\n"
-        return updatedConfig
-    }
-
-    private func containsHookCommand(_ config: String, eventName: String, command: String) -> Bool {
-        let eventHeader = "[[hooks.\(eventName)]]"
-        let handlerHeader = "[[hooks.\(eventName).hooks]]"
-        var isInsideEvent = false
-
-        for line in config.components(separatedBy: .newlines) {
-            let trimmedLine = line.trimmingCharacters(in: .whitespaces)
-
-            if trimmedLine == eventHeader || trimmedLine == handlerHeader {
-                isInsideEvent = true
-                continue
-            }
-
-            if trimmedLine.hasPrefix("[[hooks."),
-               trimmedLine != eventHeader,
-               trimmedLine != handlerHeader {
-                isInsideEvent = false
-            }
-
-            if isInsideEvent, trimmedLine.contains(command) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    private func enableCodexHooks(in config: String) -> String {
-        var lines = config.components(separatedBy: .newlines)
-
-        guard let featuresIndex = lines.firstIndex(where: { $0.trimmingCharacters(in: .whitespaces) == "[features]" }) else {
-            if !lines.isEmpty, lines.last?.isEmpty == false {
-                lines.append("")
-            }
-            lines.append("[features]")
-            lines.append("hooks = true")
-            return lines.joined(separator: "\n")
-        }
-
-        var sectionEndIndex = lines.index(after: featuresIndex)
-        while sectionEndIndex < lines.endIndex {
-            let trimmedLine = lines[sectionEndIndex].trimmingCharacters(in: .whitespaces)
-            if trimmedLine.hasPrefix("[") && trimmedLine.hasSuffix("]") {
-                break
-            }
-            sectionEndIndex = lines.index(after: sectionEndIndex)
-        }
-
-        if let existingIndex = lines[lines.index(after: featuresIndex)..<sectionEndIndex]
-            .firstIndex(where: {
-                let trimmedLine = $0.trimmingCharacters(in: .whitespaces)
-                return trimmedLine.hasPrefix("hooks") || trimmedLine.hasPrefix("codex_hooks")
-            }) {
-            lines[existingIndex] = "hooks = true"
-        } else {
-            lines.insert("hooks = true", at: sectionEndIndex)
-        }
-
-        return lines.joined(separator: "\n")
+        try AgentHookPaths.ensureDirectories()
+        try fileManager.createDirectory(at: AgentHookPaths.binDirectoryURL, withIntermediateDirectories: true)
+        try AgentHookScript.script(source: "codex", displayName: "Codex")
+            .write(to: hookScriptURL, atomically: true, encoding: .utf8)
+        try fileManager.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hookScriptURL.path)
     }
 
     private func isHookInstalled() -> Bool {
-        guard fileManager.isExecutableFile(atPath: hookScriptURL.path),
-              let config = try? String(contentsOf: codexConfigURL, encoding: .utf8) else {
-            return false
-        }
-
-        return config.contains("hooks = true") &&
-            config.contains(completedHookCommand) &&
-            containsHookCommand(config, eventName: "PermissionRequest", command: approvalHookCommand) &&
-            containsHookCommand(config, eventName: "PreToolUse", command: approvedHookCommand) &&
-            containsHookCommand(config, eventName: "PostToolUse", command: approvedHookCommand)
+        guard fileManager.isExecutableFile(atPath: hookScriptURL.path) else { return false }
+        return handlers.allSatisfy(config.contains)
     }
 
-    private var completedHookCommand: String {
-        "\"\(hookScriptURL.path)\" completed"
+    private var handlers: [AgentHookJSONConfig.Handler] {
+        [
+            .init(event: "PermissionRequest", matcher: nil, command: command("approval"),
+                  timeout: AgentHookPaths.permissionHookTimeoutSeconds),
+            .init(event: "Stop", matcher: nil, command: command("completed"), timeout: nil),
+            .init(event: "PreToolUse", matcher: nil, command: command("clear"), timeout: nil),
+            .init(event: "PostToolUse", matcher: nil, command: command("clear"), timeout: nil),
+            .init(event: "UserPromptSubmit", matcher: nil, command: command("clear"), timeout: nil)
+        ]
     }
 
-    private var approvalHookCommand: String {
-        "\"\(hookScriptURL.path)\" approval"
+    private func command(_ event: String) -> String {
+        "\"\(hookScriptURL.path)\" \(event)"
     }
 
-    private var approvedHookCommand: String {
-        "\"\(hookScriptURL.path)\" approved"
+    private var codexDirectoryURL: URL {
+        fileManager.homeDirectoryForCurrentUser.appendingPathComponent(".codex", isDirectory: true)
     }
 
-    private var hookScript: String {
-        """
-#!/bin/sh
-set -eu
-
-event_type="${1:-completed}"
-events_dir="$HOME/Library/Application Support/Notchly"
-events_file="$events_dir/agent-events.jsonl"
-
-mkdir -p "$events_dir"
-
-case "$event_type" in
-  completed|stop)
-    type="completed"
-    title="Task completed"
-    message="Codex finished"
-    ;;
-  failed)
-    type="failed"
-    title="Task failed"
-    message="Codex failed"
-    ;;
-  approval|access_request|notification|permission_request)
-    type="access_request"
-    title="Need approval"
-    message="Codex is awaiting approval"
-    ;;
-  approved|clear|pre_tool_use|pretooluse|post_tool_use|posttooluse)
-    type="clear"
-    title=""
-    message=""
-    ;;
-  *)
-    type="completed"
-    title="Task completed"
-    message="Codex finished"
-    ;;
-esac
-
-printf '{"source":"codex","type":"%s","title":"%s","message":"%s","ttl":3}\\n' "$type" "$title" "$message" >> "$events_file"
-"""
+    private var config: AgentHookJSONConfig {
+        AgentHookJSONConfig(fileURL: codexDirectoryURL.appendingPathComponent("hooks.json"))
     }
 
-    private var codexConfigDirectoryURL: URL {
-        fileManager.homeDirectoryForCurrentUser
-            .appendingPathComponent(".codex", isDirectory: true)
-    }
-
-    private var codexConfigURL: URL {
-        codexConfigDirectoryURL.appendingPathComponent("config.toml")
-    }
-
-    private var hookDirectoryURL: URL {
-        fileManager
-            .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("Notchly", isDirectory: true)
-            .appendingPathComponent("bin", isDirectory: true)
+    private var legacyConfigURL: URL {
+        codexDirectoryURL.appendingPathComponent("config.toml")
     }
 
     private var hookScriptURL: URL {
-        hookDirectoryURL.appendingPathComponent("notchly-codex-hook")
+        AgentHookPaths.binDirectoryURL.appendingPathComponent("notchly-codex-hook")
+    }
+
+    // MARK: - Legacy config.toml cleanup
+
+    /// Removes only [[hooks.*]] blocks whose command points at Notchly's script.
+    /// A block ends at the next table header that is not part of the same hooks array,
+    /// so unrelated arrays of tables such as [[skills.config]] are never swallowed.
+    private func removeLegacyConfigBlocks() throws {
+        guard fileManager.fileExists(atPath: legacyConfigURL.path) else { return }
+        let original = try String(contentsOf: legacyConfigURL, encoding: .utf8)
+        guard original.contains(hookScriptURL.path) else { return }
+
+        let cleaned = Self.removingManagedBlocks(from: original, marker: hookScriptURL.path)
+        guard cleaned != original else { return }
+
+        let backupURL = legacyConfigURL.appendingPathExtension("notchly-backup")
+        try? fileManager.removeItem(at: backupURL)
+        try fileManager.copyItem(at: legacyConfigURL, to: backupURL)
+        try cleaned.write(to: legacyConfigURL, atomically: true, encoding: .utf8)
+    }
+
+    nonisolated static func removingManagedBlocks(from config: String, marker: String) -> String {
+        var kept: [String] = []
+        var block: [String] = []
+        var inHookBlock = false
+
+        func flush() {
+            if !block.joined(separator: "\n").contains(marker) {
+                kept.append(contentsOf: block)
+            }
+            block.removeAll()
+        }
+
+        for line in config.components(separatedBy: "\n") {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+
+            if trimmed == "# Notchly Codex alerts" {
+                continue
+            }
+
+            if trimmed.hasPrefix("[[hooks.") {
+                // [[hooks.Event]] starts a block; [[hooks.Event.hooks]] continues it.
+                let continuesBlock = inHookBlock && trimmed.hasSuffix(".hooks]]")
+                if !continuesBlock {
+                    flush()
+                }
+                inHookBlock = true
+                block.append(line)
+                continue
+            }
+
+            if inHookBlock && trimmed.hasPrefix("[") {
+                flush()
+                inHookBlock = false
+                kept.append(line)
+                continue
+            }
+
+            if inHookBlock {
+                block.append(line)
+            } else {
+                kept.append(line)
+            }
+        }
+
+        flush()
+
+        var result = kept.joined(separator: "\n")
+        while result.contains("\n\n\n") {
+            result = result.replacingOccurrences(of: "\n\n\n", with: "\n\n")
+        }
+        return result
     }
 }

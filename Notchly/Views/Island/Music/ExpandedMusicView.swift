@@ -27,6 +27,8 @@ struct ExpandedMusicView: View {
     let isVolumeControlExpanded: Bool
     let size: CGSize
     let playPauseBounce: Bool
+    /// A control at the right end of the transport row, such as the mic button.
+    var accessory: AnyView? = nil
 
     let onPreviewSeek: (CGFloat) -> Void
     let onSeek: (CGFloat) -> Void
@@ -215,6 +217,11 @@ struct ExpandedMusicView: View {
                 }
 
                 Spacer()
+            }
+            .overlay(alignment: .trailing) {
+                if let accessory {
+                    accessory
+                }
             }
 
             if isVolumeControlExpanded {

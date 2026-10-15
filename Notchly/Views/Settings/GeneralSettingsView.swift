@@ -279,6 +279,55 @@ struct CodexSettingsView: View {
                     .padding(.vertical, 12)
                 }
             }
+
+            SettingsCard {
+                VStack(spacing: 0) {
+                    SettingsToggleRow(
+                        title: "Approve from the Notch",
+                        subtitle: "Show what the agent wants to run with Approve, Deny, and Terminal buttons.",
+                        isOn: $settingsManager.approveFromNotch
+                    )
+
+                    SettingsDivider()
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("Wait for a Decision")
+                                    .font(.system(size: 13, weight: .medium))
+
+                                Text("After this, the agent falls back to its own prompt.")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            Spacer()
+
+                            Text("\(Int(settingsManager.approvalWaitSeconds))s")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+
+                        Slider(
+                            value: $settingsManager.approvalWaitSeconds,
+                            in: 10...120,
+                            step: 5
+                        )
+                        .disabled(!settingsManager.approveFromNotch)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Completion Summary",
+                        subtitle: "Show the first line of the agent's final message when a task finishes.",
+                        isOn: $settingsManager.showCompletionSummary
+                    )
+                }
+            }
         }
         .onAppear {
             codexHookIntegrationManager.refreshStatus()
@@ -433,7 +482,7 @@ private struct AgentHookIntegrationRow<Manager: AgentHookIntegrationManaging>: V
 
             if isPreviewVisible {
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Notchly only adds local hook commands. They write small status events and do not read prompts or responses.")
+                    Text("Hooks run locally and nothing leaves this Mac. For approvals Notchly reads the requested tool and its input to show a summary. For completion summaries it reads the agent's final message from the local transcript.")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -595,5 +644,189 @@ private struct DisplayTargetOption: View {
             }
         }
         .buttonStyle(.plain)
+    }
+}
+
+
+struct GlancesSettingsView: View {
+    @ObservedObject var settingsManager: SettingsManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 22) {
+            SettingsCard {
+                VStack(spacing: 0) {
+                    SettingsToggleRow(
+                        title: "Download Finished",
+                        subtitle: "Shows the file name when a download lands in Downloads. Click to reveal it in Finder.",
+                        isOn: $settingsManager.showDownloadGlance
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Download Progress",
+                        subtitle: "Shows a live ring while a large download runs. Click the island to hide it.",
+                        isOn: $settingsManager.showDownloadProgress
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "AirPods Battery",
+                        subtitle: "Shows left, right, and case battery when Bluetooth headphones connect.",
+                        isOn: $settingsManager.showAirPodsGlance
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Low Accessory Battery",
+                        subtitle: "Warns when AirPods, a mouse, or a keyboard runs low.",
+                        isOn: $settingsManager.showAccessoryBatteryWarning
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "External Drives",
+                        subtitle: "Shows a drive when it connects. Click to eject, then see when it is safe to remove.",
+                        isOn: $settingsManager.showDriveGlance
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Low Disk Space",
+                        subtitle: "Warns once when the startup disk drops below 10% free.",
+                        isOn: $settingsManager.showLowDiskWarning
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Open on Hover",
+                        subtitle: "Rest the pointer on the notch to open it, no click needed.",
+                        isOn: $settingsManager.openOnHover
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Listening Ports",
+                        subtitle: "A Ports tab in the opened notch lists your local servers.",
+                        isOn: $settingsManager.showPortsPanel
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Agent Sessions",
+                        subtitle: "An Agents tab shows each Claude Code and Codex session and what it is doing.",
+                        isOn: $settingsManager.showAgentSessions
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "System Stats",
+                        subtitle: "A System tab shows CPU, memory and disk use, and network traffic over the last five minutes.",
+                        isOn: $settingsManager.showSystemTab
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "File Shelf",
+                        subtitle: "Drag files onto the notch to park them, then drag them out into any app.",
+                        isOn: $settingsManager.showFileShelf
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Mic Mute",
+                        subtitle: "A mic button in the opened notch mutes your microphone in every app.",
+                        isOn: $settingsManager.showMicMute
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Quick Note",
+                        subtitle: "A Note tab keeps one line of text until you clear it.",
+                        isOn: $settingsManager.showQuickNote
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Sound Output Picker",
+                        subtitle: "An Output tab switches between speakers, headphones, and displays.",
+                        isOn: $settingsManager.showOutputPicker
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Sound Output Notice",
+                        subtitle: "Shows where sound is playing when the output changes.",
+                        isOn: $settingsManager.showAudioOutputGlance
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Upcoming Meeting",
+                        subtitle: "Reminds you before a calendar event starts. Click to join when it has a meeting link.",
+                        isOn: $settingsManager.showCalendarGlance
+                    )
+
+                    SettingsDivider()
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Text("Remind Me Before")
+                                .font(.system(size: 13, weight: .medium))
+
+                            Spacer()
+
+                            Text("\(Int(settingsManager.calendarLeadMinutes)) min")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .monospacedDigit()
+                        }
+
+                        Slider(
+                            value: $settingsManager.calendarLeadMinutes,
+                            in: 1...15,
+                            step: 1
+                        )
+                        .disabled(!settingsManager.showCalendarGlance)
+                    }
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 12)
+
+                    SettingsDivider()
+
+                    CalendarSourcesPicker(settingsManager: settingsManager)
+                        .disabled(!settingsManager.showCalendarGlance)
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
+                        title: "Meeting Countdown",
+                        subtitle: "After you dismiss the reminder, the closed notch counts down to the meeting.",
+                        isOn: $settingsManager.showMeetingCountdown
+                    )
+                    .disabled(!settingsManager.showCalendarGlance)
+                }
+            }
+
+            Text("Calendar access is read-only. Downloads and calendar each ask for permission the first time they are turned on.")
+                .font(.system(size: 12))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
     }
 }

@@ -20,24 +20,48 @@ extension ContentView {
     }
 
     var islandContainer: some View {
-        let containerSize = usesIdleNotchSize ? idleNotchSize : layout.islandSize
+        let leftOnly = usesBatterySideWing
+        let containerSize = leftOnly ? batterySideWingSize
+            : (usesIdleNotchSize ? idleNotchSize : layout.islandSize)
         let compactContentSize = usesIdleNotchSize ? idleNotchSize : layout.closedSize
 
         return IslandContainerView(
             size: containerSize,
             cornerRadius: layout.cornerRadius,
             spacing: layout.spacing,
-            shadowOpacity: status == .opened || status == .popping ? 0.2 : 0
+            shadowOpacity: status == .opened || status == .popping ? 0.2 : 0,
+            horizontalOffset: leftOnly ? batterySideWingOffset : 0
         ) {
-            if status == .closed {
-                CompactBatteryView(
-                    batteryLevel: batteryManager.batteryLevel,
-                    symbolName: batterySymbolName,
-                    iconColor: closedIconColor,
-                    textColor: closedTextColor,
+            if status == .closed, let liveActivity = closedLiveActivity {
+                LiveActivityWingsView(
+                    activity: liveActivity,
                     size: compactContentSize,
+                    notchWidth: configuredIdleIslandWidth,
                     hoverOffsetY: hoverOffsetY
                 )
+                .opacity(tucksWings ? 0 : 1)
+                .scaleEffect(x: tucksWings ? 0.6 : 1, y: tucksWings ? 0.85 : 1, anchor: .center)
+                .blur(radius: tucksWings ? 2 : 0)
+                .allowsHitTesting(false)
+                .transition(.opacity)
+                .zIndex(1)
+            } else if status == .closed {
+                CompactBatteryView(
+                    batteryLevel: batteryManager.batteryLevel,
+                    isCharging: batteryManager.isCharging,
+                    lowBatteryThreshold: settingsManager.lowBatteryThreshold,
+                    network: networkStatusManager.glyphState,
+                    volume: musicManager.outputVolume,
+                    isVolumeMuted: musicManager.isOutputMuted,
+                    size: leftOnly ? batterySideWingSize : compactContentSize,
+                    horizontalOffset: leftOnly ? batterySideWingOffset : 0,
+                    hoverOffsetY: hoverOffsetY,
+                    micMuted: closedMicMuted,
+                    usageBars: closedUsageBars
+                )
+                .opacity(tucksWings ? 0 : 1)
+                .scaleEffect(x: tucksWings ? 0.6 : 1, y: tucksWings ? 0.85 : 1, anchor: .center)
+                .blur(radius: tucksWings ? 2 : 0)
                 .allowsHitTesting(false)
                 .transition(.opacity)
                 .zIndex(1)
@@ -46,8 +70,12 @@ extension ContentView {
             if showChargingPop && status != .opened {
                 ChargingPopView(
                     batteryLevel: batteryManager.batteryLevel,
-                    symbolName: batterySymbolName,
-                    size: layout.chargingSize
+                    lowBatteryThreshold: settingsManager.lowBatteryThreshold,
+                    network: networkStatusManager.glyphState,
+                    volume: musicManager.outputVolume,
+                    isVolumeMuted: musicManager.isOutputMuted,
+                    size: layout.chargingSize,
+                    notchWidth: layout.idleWidth
                 )
                 .offset(y: 1)
                 .allowsHitTesting(false)
@@ -62,23 +90,46 @@ extension ContentView {
                 ExpandedBatteryView(
                     batteryLevel: batteryManager.batteryLevel,
                     isCharging: batteryManager.isCharging,
-                    symbolName: batterySymbolName,
-                    progressColor: progressColor,
-                    stateText: stateText,
-                    size: layout.openedSize
+                    lowBatteryThreshold: settingsManager.lowBatteryThreshold,
+                    network: networkStatusManager.glyphState,
+                    volume: musicManager.outputVolume,
+                    isVolumeMuted: musicManager.isOutputMuted,
+                    size: layout.batteryPanelSize,
+                    accessory: micButtonAccessory
                 )
                 .offset(y: 20)
-                .allowsHitTesting(false)
-                .transition(
-                    .scale(scale: 0.9)
-                        .combined(with: .opacity)
-                        .combined(with: .offset(y: -20))
-                )
+                .transition(ExtrasPanelView.openedContentTransition)
                 .zIndex(3)
+
+                if showsExtrasPanel {
+                    ExtrasPanelView(
+                        model: extrasPanelModel,
+                        settingsManager: settingsManager,
+                        sessionTracker: sessionTracker,
+                        portsMonitor: portsMonitor,
+                        audioOutputs: audioOutputManager,
+                        usageMonitor: aiUsageMonitor,
+                        systemMonitor: systemStatsMonitor,
+                        shelf: fileShelfModel,
+                        micMute: micMuteManager,
+                        width: layout.batteryPanelSize.width,
+                        isShelfDropTargeted: isShelfDropTargeted,
+                        meeting: liveActivityModel.activity,
+                        onDismissMeeting: {
+                            withAnimation(.smooth(duration: 0.3, extraBounce: 0)) {
+                                liveActivityModel.dismissMeeting()
+                            }
+                        }
+                    )
+                        .offset(y: 20 + layout.batteryPanelSize.height - 12)
+                        .transition(ExtrasPanelView.transition)
+                        .zIndex(4)
+                }
             }
         }
         .animation(.smooth(duration: 0.22, extraBounce: 0), value: isHovered)
         .animation(animation, value: usesIdleNotchSize)
+        .animation(.smooth(duration: 0.4, extraBounce: 0), value: liveActivityModel.activity)
         .onTapGesture {
             guard settingsManager.showBattery else { return }
 

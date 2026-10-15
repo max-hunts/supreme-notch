@@ -16,6 +16,19 @@ struct IslandLayout {
     let islandWidth: CGFloat
     let allowsCompactBaseWidth: Bool
     let idleWidthOverride: CGFloat?
+    /// Taller agent island for approvals and summaries. Nil keeps the default preview height.
+    var agentContentHeight: CGFloat? = nil
+    /// Extra height below the battery panel when the notch is opened (listening ports).
+    var openedExtraHeight: CGFloat = 0
+    /// The pointer is in the menu bar beside the island: shrink to the camera notch so
+    /// menu bar items under the wings can be seen and clicked.
+    var wingsTucked = false
+    /// Wider closed wings while a live activity (agent or meeting) is showing.
+    var liveActivityExtraWidth: CGFloat = 0
+    /// Width of the battery wing beside the camera; the charging pop opens one on each side.
+    var batteryWingWidth: CGFloat? = nil
+    /// Width the selected extras tab wants. Nil uses the default opened width.
+    var preferredOpenedWidth: CGFloat? = nil
 
     let spacing: CGFloat = 10
 
@@ -24,7 +37,7 @@ struct IslandLayout {
     }
 
     var closedSize: CGSize {
-        CGSize(width: baseWidth, height: closedHeight)
+        CGSize(width: wingsTucked ? idleWidth : baseWidth + liveActivityExtraWidth, height: closedHeight)
     }
 
     var idleWidth: CGFloat {
@@ -43,12 +56,27 @@ struct IslandLayout {
         CGSize(width: idleWidth + 8, height: closedHeight)
     }
 
+    /// The opened notch is wider than the closed one, so the extras tabs have room.
+    /// Capped so it stays inside the 456 pt island window with its rounded corners.
+    var openedWidth: CGFloat {
+        min(max(preferredOpenedWidth ?? baseWidth + 50, 340), 384)
+    }
+
     var openedSize: CGSize {
-        CGSize(width: baseWidth, height: 132)
+        CGSize(width: openedWidth, height: 132 + openedExtraHeight)
+    }
+
+    var batteryPanelSize: CGSize {
+        CGSize(width: openedWidth, height: 132)
     }
 
     var musicOpenedSize: CGSize {
-        CGSize(width: baseWidth, height: isMusicVolumeControlExpanded ? 228 : 190)
+        CGSize(width: openedWidth, height: musicPlayerSize.height + openedExtraHeight)
+    }
+
+    /// The player itself, without the ports panel below it.
+    var musicPlayerSize: CGSize {
+        CGSize(width: openedWidth, height: isMusicVolumeControlExpanded ? 228 : 190)
     }
 
     var musicPreviewSize: CGSize {
@@ -92,7 +120,8 @@ struct IslandLayout {
     }
 
     var agentPreviewSize: CGSize {
-        musicPreviewSize
+        guard let agentContentHeight else { return musicPreviewSize }
+        return CGSize(width: baseWidth, height: agentContentHeight)
     }
 
     var agentCollapsedSize: CGSize {
@@ -100,7 +129,10 @@ struct IslandLayout {
     }
 
     var chargingSize: CGSize {
-        CGSize(width: max(280, baseWidth - 38), height: closedHeight)
+        if let batteryWingWidth {
+            return CGSize(width: idleWidth + batteryWingWidth * 2, height: closedHeight)
+        }
+        return CGSize(width: max(280, baseWidth - 38), height: closedHeight)
     }
 
     var islandSize: CGSize {

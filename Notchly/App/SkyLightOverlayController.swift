@@ -59,6 +59,44 @@ private final class ManagedSpaceFullscreenDetector {
     }
 }
 
+/// Lets a dragged file's preview draw above the island while a file is being dragged.
+///
+/// The island lives in its own system space ranked above normal windows, which is also
+/// above the drag preview. Tested on this Mac: moving the window to the desktop space
+/// does nothing, but ranking the island's space like a normal one and setting the window
+/// just below the drag preview level works, and lets the island receive the drop.
+@MainActor
+private final class IslandDragLayering {
+    private typealias SetSpaceLevel = @convention(c) (Int32, UInt64, Int32) -> Int32
+
+    private let setSpaceLevel: SetSpaceLevel?
+    private var savedLevel: NSWindow.Level?
+    /// kSLSSpaceAbsoluteLevelNotificationCenterAtScreenLock, as SkyLightWindow sets it.
+    private let skyLevel: Int32 = 400
+
+    init() {
+        let handle = dlopen("/System/Library/PrivateFrameworks/SkyLight.framework/Versions/A/SkyLight", RTLD_NOW)
+        setSpaceLevel = dlsym(handle, "SLSSpaceSetAbsoluteLevel").map { unsafeBitCast($0, to: SetSpaceLevel.self) }
+    }
+
+    func setLowered(_ lowered: Bool, window: NSWindow) {
+        guard let setSpaceLevel else { return }
+        let sky = SkyLightOperator.shared
+        let space = UInt64(UInt32(bitPattern: sky.space))
+        if lowered {
+            guard savedLevel == nil else { return }
+            savedLevel = window.level
+            _ = setSpaceLevel(sky.connection, space, 0)
+            window.level = NSWindow.Level(rawValue: Int(CGWindowLevelForKey(.draggingWindow)) - 1)
+        } else {
+            guard let savedLevel else { return }
+            window.level = savedLevel
+            self.savedLevel = nil
+            _ = setSpaceLevel(sky.connection, space, skyLevel)
+        }
+    }
+}
+
 @MainActor
 final class SkyLightOverlayController {
     private let environment: AppEnvironment
@@ -82,6 +120,8 @@ final class SkyLightOverlayController {
     private var activeSpaceObserver: NSObjectProtocol?
     private var isIslandHiddenForFullscreen = false
     private var lockScreenWindowIsInteractive: Bool?
+    private var fileDragCancellable: AnyCancellable?
+    private let dragLayering = IslandDragLayering()
 
     init(environment: AppEnvironment) {
         self.environment = environment
@@ -91,6 +131,17 @@ final class SkyLightOverlayController {
         installScreenObserver()
         installSettingsObserver()
         updateOverlayScreen(force: true)
+
+        // The island sits in a system layer above where macOS draws drag previews, so a
+        // dragged file's preview would slide under it. During a file drag it moves down to
+        // the normal desktop layer, just below the drag preview, and goes back on release.
+        fileDragCancellable = environment.fileDragWatcher.$isFileDragActive
+            .removeDuplicates()
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] active in
+                guard let self, let window = self.islandWindowController?.window else { return }
+                self.dragLayering.setLowered(active, window: window)
+            }
     }
 
     func stop() {
@@ -593,7 +644,8 @@ final class SkyLightOverlayController {
 
     private func makeIslandWindowController(on screen: NSScreen) -> NSWindowController {
         let size = islandWindowSize
-        let window = NSPanel(
+        // IslandPanel only takes keyboard focus while the quick note is being edited.
+        let window = IslandPanel(
             contentRect: islandWindowFrame(for: screen, size: size),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
@@ -624,6 +676,16 @@ final class SkyLightOverlayController {
             brightnessManager: environment.brightnessManager,
             networkStatusManager: environment.networkStatusManager,
             agentEventManager: environment.agentEventManager,
+            portsMonitor: environment.portsMonitor,
+            extrasPanelModel: environment.extrasPanelModel,
+            sessionTracker: environment.agentEventManager.sessionTracker,
+            audioOutputManager: environment.audioOutputManager,
+            liveActivityModel: environment.liveActivityModel,
+            aiUsageMonitor: environment.aiUsageMonitor,
+            systemStatsMonitor: environment.systemStatsMonitor,
+            fileShelfModel: environment.fileShelfModel,
+            micMuteManager: environment.micMuteManager,
+            fileDragWatcher: environment.fileDragWatcher,
             lockScreenOverlayModel: environment.lockScreenOverlayModel,
             animationsEnabled: true,
             onClosedHeightChange: { [weak self] height in
@@ -655,7 +717,8 @@ final class SkyLightOverlayController {
     }
 
     private var islandWindowSize: CGSize {
-        CGSize(width: 456, height: 280)
+        // Tall enough for the music player with volume open plus six listening ports.
+        CGSize(width: 456, height: 470)
     }
 
     private func lockScreenPlayerYPosition(for screen: NSScreen) -> CGFloat {

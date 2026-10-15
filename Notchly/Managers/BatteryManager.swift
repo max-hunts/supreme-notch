@@ -17,6 +17,7 @@ final class BatteryManager: ObservableObject {
     @Published var powerSource: String = "Unknown"
 
     private var timer: Timer?
+    private var powerSourceNotification: CFRunLoopSource?
     private let musicManager: MusicManager
 
     init(musicManager: MusicManager) {
@@ -24,10 +25,25 @@ final class BatteryManager: ObservableObject {
 
         updateBatteryInfo()
         startMonitoring()
+        startPowerSourceNotifications()
     }
 
     deinit {
         timer?.invalidate()
+        if let powerSourceNotification {
+            CFRunLoopRemoveSource(CFRunLoopGetMain(), powerSourceNotification, .commonModes)
+        }
+    }
+
+    /// Plugging in or unplugging updates at once; the timer alone could lag 15 s or more.
+    private func startPowerSourceNotifications() {
+        let context = Unmanaged.passUnretained(self).toOpaque()
+        guard let source = IOPSNotificationCreateRunLoopSource({ context in
+            guard let context else { return }
+            Unmanaged<BatteryManager>.fromOpaque(context).takeUnretainedValue().updateBatteryInfo()
+        }, context)?.takeRetainedValue() else { return }
+        CFRunLoopAddSource(CFRunLoopGetMain(), source, .commonModes)
+        powerSourceNotification = source
     }
 
     func startMonitoring() {

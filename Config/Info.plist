@@ -2,10 +2,18 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Notchly shows the battery level of your AirPods when they connect.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Notchly reads your calendar to remind you in the notch shortly before a meeting starts. It never changes events.</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Notchly reads your calendar to remind you in the notch shortly before a meeting starts. It never changes events.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Notchly watches your Downloads folder to show a short notice when a download finishes.</string>
 	<key>SUAutomaticallyUpdate</key>
-	<true/>
+	<false/>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>SUEnableInstallerLauncherService</key>
 	<true/>
 	<key>SUFeedURL</key>

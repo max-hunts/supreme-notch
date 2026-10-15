@@ -194,12 +194,18 @@ final class LockScreenWallpaperManager {
             return
         }
 
-        restore(
+        let restored = restore(
             recoveredState.wallpapers,
             wallpaperStoreIndex: recoveredState.wallpaperStoreIndex,
             logPrefix: "Recovery"
         )
 
+        // Keep the recovery record and the backups it points to until a restore
+        // succeeds, so the next launch or unlock can try again.
+        guard restored else {
+            print("[LockScreenWallpaper] Recovery incomplete; keeping recovery state")
+            return
+        }
         try? fileManager.removeItem(at: recoveryURL)
         cleanupGeneratedArtwork(keeping: nil)
     }
@@ -514,30 +520,35 @@ final class LockScreenWallpaperManager {
 
         let usesStaticImage = wallpaperStoreUsesStaticImage(wallpaperStoreIndex)
         var deferredDynamicRestore = false
+        var restored = true
         if usesStaticImage {
-            restore(wallpapers)
+            restored = restore(wallpapers)
         } else {
-            deferredDynamicRestore = restoreDynamicWallpaperStore(
+            let outcome = restoreDynamicWallpaperStore(
                 from: wallpaperStoreIndex,
                 previewWallpapers: wallpapers
             )
+            deferredDynamicRestore = outcome == .deferred
+            restored = outcome != .failed
         }
         activeArtworkURLs.removeAll()
 
         guard !deferredDynamicRestore else { return }
 
         guard allowsConfirmation else {
-            finishRestore(keeping: wallpapers)
+            finishRestore(keeping: wallpapers, restored: restored)
             return
         }
 
+        let firstAttemptRestored = restored
         let task = DispatchWorkItem { [weak self] in
             guard let self, self.operationID == currentOperationID else { return }
+            var confirmed = firstAttemptRestored
             if usesStaticImage {
-                self.restore(wallpapers, logPrefix: "Restore confirmation")
+                confirmed = self.restore(wallpapers, logPrefix: "Restore confirmation") || confirmed
             }
             self.restoreConfirmationTask = nil
-            self.finishRestore(keeping: wallpapers)
+            self.finishRestore(keeping: wallpapers, restored: confirmed)
         }
         restoreConfirmationTask = task
         DispatchQueue.main.asyncAfter(
@@ -546,9 +557,17 @@ final class LockScreenWallpaperManager {
         )
     }
 
-    private func finishRestore(keeping wallpapers: [OriginalWallpaper]) {
+    /// `restored` is false when the original wallpaper could not be put back. The
+    /// recovery record and backups then stay on disk for the next attempt.
+    private func finishRestore(keeping wallpapers: [OriginalWallpaper], restored: Bool = true) {
         originalWallpapers.removeAll()
         originalWallpaperStoreIndex = nil
+        guard restored else {
+            print("[LockScreenWallpaper] Restore incomplete; keeping recovery state")
+            scheduleGeneratedArtworkCleanup()
+            refreshCachedDesktopWallpapers()
+            return
+        }
         try? fileManager.removeItem(at: recoveryURL)
         scheduleGeneratedArtworkCleanup()
         cleanupOriginalWallpaperBackups(
@@ -575,26 +594,31 @@ final class LockScreenWallpaperManager {
         let usesStaticImage = wallpaperStoreUsesStaticImage(wallpaperStoreIndex)
         let previewWallpapers = wallpapers.map(upgradedAerialPreviewWallpaper)
         var deferredDynamicRestore = false
+        var restored = true
         if usesStaticImage {
-            restore(previewWallpapers, logPrefix: "Collapse preview")
+            restored = restore(previewWallpapers, logPrefix: "Collapse preview")
         } else {
-            deferredDynamicRestore = restoreDynamicWallpaperStore(
+            let outcome = restoreDynamicWallpaperStore(
                 from: wallpaperStoreIndex,
                 previewWallpapers: previewWallpapers
             )
+            deferredDynamicRestore = outcome == .deferred
+            restored = outcome != .failed
         }
         activeArtworkURLs.removeAll()
         scheduleGeneratedArtworkCleanup()
 
         guard !deferredDynamicRestore else { return }
 
+        let firstAttemptRestored = restored
         let task = DispatchWorkItem { [weak self] in
             guard let self, self.operationID == currentOperationID else { return }
+            var confirmed = firstAttemptRestored
             if usesStaticImage {
-                self.restore(previewWallpapers, logPrefix: "Collapse confirmation")
+                confirmed = self.restore(previewWallpapers, logPrefix: "Collapse confirmation") || confirmed
             }
             self.previewRestoreTask = nil
-            self.finishRestore(keeping: wallpapers)
+            self.finishRestore(keeping: wallpapers, restored: confirmed)
         }
         previewRestoreTask = task
         DispatchQueue.main.asyncAfter(
@@ -603,27 +627,33 @@ final class LockScreenWallpaperManager {
         )
     }
 
+    /// True only when the wallpaper is back in place now. A deferred dynamic
+    /// restore counts as not done, so callers keep the recovery record.
     private func restore(
         _ wallpapers: [OriginalWallpaper],
         wallpaperStoreIndex: Data?,
         logPrefix: String = "Restore"
-    ) {
+    ) -> Bool {
         if wallpaperStoreUsesStaticImage(wallpaperStoreIndex) {
-            restore(wallpapers, logPrefix: logPrefix)
+            return restore(wallpapers, logPrefix: logPrefix)
         } else if let wallpaperStoreIndex {
-            _ = restoreDynamicWallpaperStore(
+            return restoreDynamicWallpaperStore(
                 from: wallpaperStoreIndex,
                 previewWallpapers: wallpapers
-            )
+            ) == .restored
         } else {
-            restore(wallpapers, logPrefix: logPrefix)
+            return restore(wallpapers, logPrefix: logPrefix)
         }
     }
 
+    /// False when any connected display could not be set back. Displays that are
+    /// no longer connected are skipped, since nothing can restore them now.
+    @discardableResult
     private func restore(
         _ wallpapers: [OriginalWallpaper],
         logPrefix: String = "Restore"
-    ) {
+    ) -> Bool {
+        var succeeded = true
         for wallpaper in wallpapers {
             guard let targetScreen = screen(with: wallpaper.displayID) else { continue }
 
@@ -634,9 +664,11 @@ final class LockScreenWallpaperManager {
                     options: wallpaper.options
                 )
             } catch {
+                succeeded = false
                 print("[LockScreenWallpaper] \(logPrefix) failed: \(error)")
             }
         }
+        return succeeded
     }
 
     private func recoveredOriginalWallpapers() -> [OriginalWallpaper] {
@@ -995,15 +1027,22 @@ final class LockScreenWallpaperManager {
         restoreConfirmationTask = nil
     }
 
+    private enum DynamicStoreRestoreOutcome {
+        /// Finishes later, after unlock; that path calls finishRestore itself.
+        case deferred
+        case restored
+        case failed
+    }
+
     @discardableResult
     private func restoreDynamicWallpaperStore(
         from data: Data?,
         previewWallpapers: [OriginalWallpaper]
-    ) -> Bool {
-        guard let data else { return false }
+    ) -> DynamicStoreRestoreOutcome {
+        guard let data else { return .failed }
 
         if isDynamicWallpaperRestoreInProgress {
-            return true
+            return .deferred
         }
 
         if isScreenLocked()
@@ -1019,14 +1058,13 @@ final class LockScreenWallpaperManager {
             if isUnlockTransitionInProgress {
                 schedulePendingDynamicWallpaperRestoreAfterUnlock()
             }
-            return true
+            return .deferred
         }
 
-        performDynamicWallpaperStoreRestore(
+        return performDynamicWallpaperStoreRestore(
             from: data,
             transitionWallpapers: previewWallpapers
-        )
-        return false
+        ) ? .restored : .failed
     }
 
     private func completePendingDynamicWallpaperRestore() {
@@ -1043,7 +1081,7 @@ final class LockScreenWallpaperManager {
             ? recoveredState.wallpapers
             : originalWallpapers
 
-        performDynamicWallpaperStoreRestore(
+        let restored = performDynamicWallpaperStoreRestore(
             from: data,
             transitionWallpapers: wallpapers
         )
@@ -1052,7 +1090,7 @@ final class LockScreenWallpaperManager {
             guard let self else { return }
             self.isDynamicWallpaperRestoreInProgress = false
             self.restoreConfirmationTask = nil
-            self.finishRestore(keeping: wallpapers)
+            self.finishRestore(keeping: wallpapers, restored: restored)
         }
         restoreConfirmationTask = task
         DispatchQueue.main.asyncAfter(
@@ -1061,15 +1099,16 @@ final class LockScreenWallpaperManager {
         )
     }
 
+    @discardableResult
     private func performDynamicWallpaperStoreRestore(
         from data: Data,
         transitionWallpapers: [OriginalWallpaper]
-    ) {
+    ) -> Bool {
         showWallpaperReloadTransition(using: transitionWallpapers)
         guard restoreWallpaperStore(from: data) else {
             closeWallpaperReloadTransition()
             isDynamicWallpaperRestoreInProgress = false
-            return
+            return false
         }
 
         DispatchQueue.main.asyncAfter(
@@ -1082,6 +1121,7 @@ final class LockScreenWallpaperManager {
                 previousWallpaperAgentPID: previousWallpaperAgentPID
             )
         }
+        return true
     }
 
     private func reloadWallpaperAgent() {
@@ -1301,7 +1341,8 @@ final class LockScreenWallpaperManager {
         guard let data else { return false }
 
         do {
-            try data.write(to: wallpaperStoreIndexURL)
+            // Atomic, so an interrupted write never leaves a half-written store.
+            try data.write(to: wallpaperStoreIndexURL, options: .atomic)
             return true
         } catch {
             print("[LockScreenWallpaper] Wallpaper store restore failed: \(error)")

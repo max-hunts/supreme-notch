@@ -1,137 +1,127 @@
 <p align="center">
-  <img src="Notchly/Resources/Assets.xcassets/AppIcon.appiconset/logo_256x256.png" width="96" height="96" alt="Notchly app icon">
+  <img src="Notchly/Resources/Assets.xcassets/AppIcon.appiconset/logo_256x256.png" width="96" height="96" alt="App icon">
 </p>
 
-<h1 align="center">Notchly</h1>
+<h1 align="center">Better Notch</h1>
 
 <p align="center">
-  Turn your MacBook notch into a useful, interactive space.
-</p>
-
-<p align="center">
-  <a href="https://notchly.xyz"><strong>Website</strong></a>
-  ·
-  <a href="https://github.com/Notchly/Notchly/releases/latest"><strong>Download</strong></a>
-  ·
-  <a href="https://cdn.notchly.xyz/notchly-preview.mp4"><strong>Preview</strong></a>
-  ·
-  <a href="https://x.com/i/status/2061860955928100956"><strong>Codex Alerts</strong></a>
-  ·
-  <a href="docs/ARCHITECTURE.md"><strong>Architecture</strong></a>
+  A native macOS app that turns the MacBook notch into a status bar, an agent console and a scratch space.
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/macOS-14.6%2B-black?style=flat-square&logo=apple" alt="macOS 14.6+">
   <img src="https://img.shields.io/badge/SwiftUI-Native-orange?style=flat-square&logo=swift" alt="Native SwiftUI app">
-  <img src="https://img.shields.io/badge/Privacy-Friendly-green?style=flat-square" alt="Privacy friendly">
-  <a href="https://github.com/Notchly/Notchly/releases/latest">
-    <img alt="Latest release" src="https://img.shields.io/github/v/release/Notchly/Notchly?style=flat-square&label=release">
-  </a>
-  <a href="https://github.com/Notchly/Notchly/blob/main/LICENSE">
-    <img alt="License" src="https://img.shields.io/github/license/Notchly/Notchly?style=flat-square">
-  </a>
-  <a href="https://github.com/Notchly/Notchly/stargazers">
-    <img alt="GitHub stars" src="https://img.shields.io/github/stars/Notchly/Notchly?style=flat-square">
-  </a>
-  <a href="https://github.com/Notchly/Notchly/releases">
-    <img alt="Downloads" src="https://img.shields.io/github/downloads/Notchly/Notchly/total?style=flat-square">
-  </a>
+  <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License">
 </p>
+
+Better Notch is a fork of [Notchly](https://github.com/Notchly/Notchly) (MIT). The app still builds and installs as **Notchly.app**, with the same bundle ID, so settings carry over.
+
+## At a glance
 
 <p align="center">
-  If Notchly makes your Mac feel better, please
-  <a href="https://github.com/Notchly/Notchly/stargazers"><strong>star the project</strong></a>.
+  <img src="docs/images/closed-notch.png" width="520" alt="The closed notch with usage bars on the left and the status ring on the right">
 </p>
 
----
+The closed notch stays out of the way. The camera sits in the middle, with a small wing on each side:
 
-## Notchly
-
-**Notchly** is a lightweight native macOS app that turns the MacBook notch into a compact control surface.
-
-It adds music controls, battery status, lock screen support, focus animations, gestures, smooth transitions, and Codex AI alerts around the notch.
-
-## Preview
+- **Right wing, the status ring.** One glyph shows three things. The outer arc is your battery level. The center shows your network: Wi-Fi bars, an Ethernet plug, or offline. The four dots along the bottom show output volume.
+- **Left wing, usage bars.** One short bar for each subscription limit: Claude's 5-hour, weekly and per-model limits, plus Codex. They refresh every 5 minutes.
+- **Muted mic.** A red slashed mic appears next to the camera whenever your microphone is muted.
 
 <p align="center">
-
-<img width="1920" height="1080" alt="s-preview" src="https://github.com/user-attachments/assets/4a3fb21b-0261-441e-bdf0-afe69f9cb342" />
-
+  <img src="docs/images/status-ring.png" width="560" alt="Status ring states: Wi-Fi, weak Wi-Fi, charging, Ethernet, offline with low battery">
 </p>
 
-## Highlights
+The ring turns green while charging, red when the battery is low and yellow in Low Power Mode. Charging color changes the moment you plug in or unplug.
 
-- Music controls for Spotify, Apple Music, and supported media sources.
-- Battery and charging indicators.
-- Lock screen music controls.
-- Focus mode animations.
-- Swipe gestures for quick interactions.
-- Multi-display behavior for primary screen setups.
-- Codex AI alerts for approval and task completion events.
-- Local-first design with no personal data collection.
+<p align="center">
+  <img src="docs/images/usage-colors.png" width="460" alt="Usage color scales for Claude and Codex">
+</p>
 
-## Codex AI Alerts
+Claude's bars run cold to hot, from blue through white to red. Codex's run green to red. Any bar at its limit turns purple.
 
-Notchly can show alerts for Codex sessions.
+## Opened notch
 
-Enable it in **Settings → Codex**:
+Click the notch, or just hover over it, to open it.
 
-1. Turn on **Codex Alerts**.
-2. Enable **Need Approval Sound** if you want approval alerts.
-3. Enable **Task Completed Sound** if you want completion alerts.
-4. Restart Codex so the local Stop hook can send completion events to Notchly.
+<p align="center">
+  <img src="docs/images/opened-battery.png" width="470" alt="The opened notch with a large status ring">
+</p>
 
-Preview: https://x.com/i/status/2061860955928100956
+The top shows a large status ring with the battery percentage, plus a mic mute button. Below it is a row of tabs. Swipe or click to switch tabs, and the notch resizes to fit each one.
+
+| Tab | What it shows |
+|---|---|
+| Agents | Your running Claude Code and Codex sessions, what each one is doing right now, and a button that opens the exact session in the Claude app. |
+| Usage | Claude and Codex usage bars with reset times. |
+| Ports | Local servers listening on your Mac, with the process that owns each port. |
+| System | CPU, memory and disk rings, plus a 5-minute network chart (download and upload). |
+| Shelf | A drop zone for files. Drag a file toward the notch and it opens itself; drag files back out with their names intact. |
+| Note | A quick scratch note that stays between launches. |
+| Output | Switch the audio output device. |
+
+## Agent alerts
+
+Better Notch installs small hooks into Claude Code, Codex and Cursor, and shows their events in the notch:
+
+- **Approvals.** Approve or deny a tool request from the notch, or hand it back to the agent's own prompt.
+- **Questions.** When an agent asks you a question, the notch shows it with an Open session button. Questions never get an Approve button.
+- **Finished turns.** A short summary of what the agent did, with Open session.
+- **No interruptions.** Alerts wait while you are using the opened notch, and every alert has an X to dismiss it.
+
+## Glances
+
+Short notices that slide out of the notch and go away on their own:
+
+- Meeting reminders from your calendars, including Google calendars added through Internet Accounts, with Join and Dismiss buttons and an optional countdown strip.
+- Network changes: Wi-Fi connected or lost, no internet, personal hotspot, Ethernet connected or disconnected.
+- AirPods battery when they connect, and audio output changes.
+- Finished downloads.
+- Focus, brightness and volume changes, plus music controls on the lock screen.
 
 ## Requirements
 
-- macOS 14.6 or newer.
+- A Mac with a notch, on macOS 14.6 or newer.
+- For the usage bars: [claude-usage-monitor](https://github.com/max-hunts/claude-usage-monitor), which is bundled inside the app. Enter your keys in **Settings → AI Usage**; they are stored in your Keychain.
 
-## Installation
+## Install
 
-1. Download the latest DMG from [Releases](https://github.com/Notchly/Notchly/releases/latest).
-2. Open the DMG.
-3. Move Notchly to Applications.
-4. Launch Notchly.
+1. Download the latest `Notchly-<version>.zip` from [Releases](../../releases).
+2. Unzip it and move **Notchly.app** to Applications.
+3. Open it. The build is signed with a Developer ID and notarized by Apple.
 
-macOS may ask for Automation permission when using Spotify or Apple Music controls.
+Automatic updates are turned off in this fork for now, so install new releases by hand.
 
-## Settings
+## Privacy
 
-- General behavior, launch at login, lock sound, and focus animations.
-- Battery visibility and low-battery threshold.
-- Music preview timing and AppleScript controls.
-- Primary-display behavior for multi-monitor setups.
-- Codex alerts, approval sound, task completed sound, and alert duration.
+Everything runs on your Mac. There is no analytics or telemetry. The only network calls are the ones you turn on: the usage monitor asks Claude and OpenAI for your own usage, and the internet check pings `www.apple.com`. Agent hooks write to a local folder that only this app reads.
 
-## Build From Source
+## Build from source
 
 ```sh
-git clone git@github.com:Notchly/Notchly.git
-cd Notchly
+git clone git@github.com:max-hunts/better-notch.git
+cd better-notch
 open Notchly.xcodeproj
 ```
 
-Or build from the command line:
+A Release build needs the usage monitor copied into the app after export, then the app re-signed:
 
 ```sh
-xcodebuild -project Notchly.xcodeproj -scheme Notchly -configuration Debug build
+cargo build --release --manifest-path ../claude-usage-monitor/Cargo.toml
+cp ../claude-usage-monitor/target/release/claude-usage-monitor Notchly.app/Contents/Helpers/
+codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" Notchly.app/Contents/Helpers/claude-usage-monitor
+codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" \
+  --preserve-metadata=entitlements,requirements,flags,runtime Notchly.app
 ```
 
-## Dependencies
+## Credits
 
-- [Sparkle](https://sparkle-project.org/) for app updates.
-- [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow) for overlay windows.
-- [mediaremote-adapter](https://github.com/ejbills/mediaremote-adapter) for Now Playing / MediaRemote access.
-
-## Contributing
-
-Pull requests are welcome.
-
-Please keep platform integrations isolated, avoid committing local signing changes, and make sure the app builds before opening a PR.
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+- [Notchly](https://github.com/Notchly/Notchly), the app this fork is built on (MIT).
+- [DuoBar](https://github.com/Mikeli7666/DuoBar) by Mike Li, for the status ring's geometry (MIT).
+- [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow) for overlay windows (MIT).
+- [Sparkle](https://sparkle-project.org/) for updates.
+- [mediaremote-adapter](https://github.com/ejbills/mediaremote-adapter) for Now Playing access.
 
 ## License
 
-Notchly is released under the MIT License. See [LICENSE](LICENSE).
+MIT. See [LICENSE](LICENSE). The original Notchly copyright notice is kept as the license requires.

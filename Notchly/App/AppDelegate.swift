@@ -47,6 +47,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
 
         menuController.install()
+        environment.claudeHookIntegrationManager.migrateIfNeeded()
+        environment.codexHookIntegrationManager.migrateIfNeeded()
         environment.agentEventManager.start()
         environment.musicManager.start()
         environment.networkStatusManager.start()
@@ -69,6 +71,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard !Task.isCancelled else { return }
             self.environment.brightnessManager.start()
             self.environment.whatsNewWindow.showIfNeeded()
+
+            try? await Task.sleep(for: .milliseconds(400))
+            guard !Task.isCancelled else { return }
+            self.environment.downloadGlanceManager.start()
+            self.environment.airPodsGlanceManager.start()
+            self.environment.calendarGlanceManager.start()
+            self.environment.accessoryBatteryWarningManager.start()
+            self.environment.externalDriveGlanceManager.start()
+            self.environment.diskSpaceGlanceManager.start()
+            self.environment.audioOutputManager.start()
+            self.environment.micMuteManager.start()
+            self.environment.systemStatsMonitor.start()
+            self.environment.fileDragWatcher.start()
+            if self.environment.settingsManager.showPortsPanel {
+                self.environment.portsMonitor.startBackgroundRefresh()
+            }
             self.startupTask = nil
         }
     }
@@ -78,6 +96,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         startupTask = nil
         environment.musicManager.stop()
         environment.agentEventManager.stop()
+        environment.downloadGlanceManager.stop()
+        environment.calendarGlanceManager.stop()
+        environment.airPodsGlanceManager.stop()
+        environment.accessoryBatteryWarningManager.stop()
+        environment.externalDriveGlanceManager.stop()
+        environment.diskSpaceGlanceManager.stop()
+        environment.audioOutputManager.stop()
+        environment.extrasPanelModel.commitNote()
         environment.focusManager.stop()
         environment.brightnessManager.stop()
         environment.networkStatusManager.stop()

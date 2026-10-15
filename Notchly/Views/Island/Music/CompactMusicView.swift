@@ -15,6 +15,9 @@ struct CompactMusicView: View {
     let size: CGSize
     let hoverOffsetY: CGFloat
     let skipIndicator: String?
+    /// Shown in place of the waveform while an agent works or a meeting is near.
+    var liveActivity: LiveActivity? = nil
+    var micMuted = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -34,12 +37,23 @@ struct CompactMusicView: View {
 
             Spacer()
 
-            MusicWaveformView(
-                isPlaying: isPlaying,
-                color: waveformColor,
-                skipIndicator: skipIndicator
-            )
-            .frame(width: 36, height: 18)
+            if micMuted {
+                MutedMicIndicator()
+                    .transition(.opacity)
+            }
+
+            if let liveActivity {
+                LiveActivityBadge(activity: liveActivity)
+                    .transition(.opacity)
+            } else {
+                MusicWaveformView(
+                    isPlaying: isPlaying,
+                    color: waveformColor,
+                    skipIndicator: skipIndicator
+                )
+                .frame(width: 36, height: 18)
+                .transition(.opacity)
+            }
         }
         .padding(.horizontal, 12)
         .frame(width: size.width, height: size.height)

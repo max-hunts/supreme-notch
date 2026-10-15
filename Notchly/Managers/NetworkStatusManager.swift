@@ -17,6 +17,30 @@ enum NetworkStatusKind: Equatable, Sendable {
     case noInternet
     case disconnected
     case wifiOff
+    case ethernetConnected
+    case ethernetDisconnected
+}
+
+/// Wi-Fi bars shown in the closed status ring, from the documented RSSI ranges DuoBar uses.
+enum WiFiSignalLevel: Equatable, Sendable {
+    case strong
+    case medium
+    case weak
+
+    init(rssi: Int?) {
+        guard let rssi, rssi < 0 else { self = .medium; return }
+        if rssi >= -67 { self = .strong }
+        else if rssi >= -75 { self = .medium }
+        else { self = .weak }
+    }
+}
+
+/// What the center of the closed status ring shows.
+enum GlyphNetworkState: Equatable, Sendable {
+    case wifi(WiFiSignalLevel)
+    case ethernet
+    case other
+    case offline
 }
 
 struct NetworkStatusEvent: Equatable, Sendable {
@@ -29,16 +53,19 @@ private enum NetworkConnectionState: Equatable, Sendable {
     case wifiOff
     case disconnected
     case connected(networkName: String?, isPersonalHotspot: Bool, hasInternet: Bool)
+    case ethernet
 }
 
 private struct NetworkPathSnapshot: Equatable, Sendable {
     let isSatisfied: Bool
     let usesWiFi: Bool
+    let usesWiredEthernet: Bool
     let isExpensive: Bool
 
     static let unknown = NetworkPathSnapshot(
         isSatisfied: false,
         usesWiFi: false,
+        usesWiredEthernet: false,
         isExpensive: false
     )
 }
@@ -47,6 +74,8 @@ private struct NetworkPathSnapshot: Equatable, Sendable {
 final class NetworkStatusManager: NSObject, ObservableObject {
     @Published private(set) var eventID = 0
     @Published private(set) var currentEvent: NetworkStatusEvent?
+    /// Live transport and Wi-Fi strength for the closed status ring.
+    @Published private(set) var glyphState: GlyphNetworkState = .offline
 
     private let wifiClient = CWWiFiClient.shared()
     private let monitorQueue = DispatchQueue(
@@ -61,6 +90,7 @@ final class NetworkStatusManager: NSObject, ObservableObject {
     private var refreshTask: Task<Void, Never>?
     private var probeTask: Task<Void, Never>?
     private var healthCheckTask: Task<Void, Never>?
+    private var signalTask: Task<Void, Never>?
     private var resolutionID = UUID()
     private var isStarted = false
 
@@ -81,6 +111,7 @@ final class NetworkStatusManager: NSObject, ObservableObject {
         }
         scheduleRefresh(after: .milliseconds(200))
         startHealthChecks()
+        startSignalRefresh()
     }
 
     func stop() {
@@ -93,6 +124,8 @@ final class NetworkStatusManager: NSObject, ObservableObject {
         probeTask = nil
         healthCheckTask?.cancel()
         healthCheckTask = nil
+        signalTask?.cancel()
+        signalTask = nil
         resolutionID = UUID()
 
         pathMonitor?.cancel()
@@ -118,7 +151,36 @@ final class NetworkStatusManager: NSObject, ObservableObject {
     private func receive(path: NetworkPathSnapshot) {
         guard latestPath != path else { return }
         latestPath = path
+        refreshGlyphState()
         scheduleRefresh()
+    }
+
+    /// The path monitor reports transport changes at once; RSSI has no public change
+    /// event, so the Wi-Fi bars are re-read on a slow timer, as DuoBar does.
+    private func startSignalRefresh() {
+        signalTask?.cancel()
+        signalTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(15))
+                guard !Task.isCancelled, let self else { return }
+                self.refreshGlyphState()
+            }
+        }
+    }
+
+    private func refreshGlyphState() {
+        let next: GlyphNetworkState
+        if !latestPath.isSatisfied {
+            next = .offline
+        } else if latestPath.usesWiredEthernet {
+            next = .ethernet
+        } else if latestPath.usesWiFi {
+            let rssi = wifiClient.interface()?.rssiValue() ?? 0
+            next = .wifi(WiFiSignalLevel(rssi: rssi == 0 ? nil : rssi))
+        } else {
+            next = .other
+        }
+        if glyphState != next { glyphState = next }
     }
 
     private func scheduleRefresh(after delay: Duration = .milliseconds(280)) {
@@ -138,6 +200,14 @@ final class NetworkStatusManager: NSObject, ObservableObject {
         resolutionID = UUID()
         let activeResolutionID = resolutionID
         probeTask?.cancel()
+
+        refreshGlyphState()
+
+        // A routed wired link wins over Wi-Fi, matching the path the system actually uses.
+        if latestPath.isSatisfied && latestPath.usesWiredEthernet {
+            publish(.ethernet)
+            return
+        }
 
         let interface = wifiClient.interface()
         let isPoweredOn = interface?.powerOn() ?? false
@@ -230,9 +300,15 @@ final class NetworkStatusManager: NSObject, ObservableObject {
         for state: NetworkConnectionState,
         previousState: NetworkConnectionState
     ) -> NetworkStatusEvent? {
+        if previousState == .ethernet, state != .ethernet, !state.isConnected {
+            return NetworkStatusEvent(kind: .ethernetDisconnected, networkName: nil)
+        }
+
         switch state {
         case .unknown:
             return nil
+        case .ethernet:
+            return NetworkStatusEvent(kind: .ethernetConnected, networkName: nil)
         case .wifiOff:
             guard previousState != .wifiOff else { return nil }
             return NetworkStatusEvent(kind: .wifiOff, networkName: nil)
@@ -528,6 +604,7 @@ private final class SystemNetworkPathMonitor: @unchecked Sendable {
             handler(NetworkPathSnapshot(
                 isSatisfied: pathStatus(path) == 1,
                 usesWiFi: pathUsesInterface(path, 1),
+                usesWiredEthernet: pathUsesInterface(path, 3),
                 isExpensive: pathIsExpensive(path)
             ))
         }

@@ -33,7 +33,14 @@ extension ContentView {
                         if showsAgentActivity && showsAgentMusicContent {
                             AgentActivityView(
                                 event: agentEvent,
-                                size: layout.musicPreviewSize
+                                size: layout.agentPreviewSize,
+                                pendingCount: agentEventManager.pendingApprovals.count,
+                                onDecision: { request, decision in
+                                    agentEventManager.decide(request, decision)
+                                },
+                                onGlanceButton: { event, button in
+                                    agentEventManager.handleGlanceButton(event, button)
+                                }
                             )
                             .id(agentPresentationContentKey(for: agentEvent))
                             .offset(y: isAgentMusicClosing || agentMusicContentAppeared ? 10 : 4)
@@ -43,7 +50,7 @@ extension ContentView {
                             )
                         }
                     }
-                    .frame(width: layout.musicPreviewSize.width + layout.cornerRadius * 2, height: layout.musicPreviewSize.height)
+                    .frame(width: layout.agentPreviewSize.width + layout.cornerRadius * 2, height: layout.agentPreviewSize.height)
                 }
             } else {
                 IslandContainerView(
@@ -63,8 +70,14 @@ extension ContentView {
                     isPlaying: isWaveformActive,
                     size: layout.closedSize,
                     hoverOffsetY: hoverOffsetY,
-                    skipIndicator: skipIndicator
+                    skipIndicator: skipIndicator,
+                    liveActivity: closedLiveActivity,
+                    micMuted: settingsManager.showMicMute && micMuteManager.isMuted
                 )
+                .animation(.smooth(duration: 0.4, extraBounce: 0), value: closedLiveActivity)
+                .opacity(tucksWings ? 0 : 1)
+                .scaleEffect(x: tucksWings ? 0.6 : 1, y: tucksWings ? 0.85 : 1, anchor: .center)
+                .blur(radius: tucksWings ? 2 : 0)
                 .allowsHitTesting(false)
                 .transition(.opacity)
                 .zIndex(1)
@@ -153,8 +166,9 @@ extension ContentView {
                     outputVolume: musicManager.outputVolume,
                     isOutputMuted: musicManager.isOutputMuted,
                     isVolumeControlExpanded: showMusicVolumeControl,
-                    size: layout.musicOpenedSize,
+                    size: layout.musicPlayerSize,
                     playPauseBounce: playPauseBounce,
+                    accessory: micButtonAccessory,
                     onPreviewSeek: { progress in
                         musicManager.previewSeek(toProgress: progress)
                     },
@@ -195,12 +209,33 @@ extension ContentView {
                     }
                 )
                 .offset(y: 20)
-                .transition(
-                    .scale(scale: 0.9)
-                        .combined(with: .opacity)
-                        .combined(with: .offset(y: -20))
-                )
+                .transition(ExtrasPanelView.openedContentTransition)
                 .zIndex(3)
+
+                if showsExtrasPanel {
+                    ExtrasPanelView(
+                        model: extrasPanelModel,
+                        settingsManager: settingsManager,
+                        sessionTracker: sessionTracker,
+                        portsMonitor: portsMonitor,
+                        audioOutputs: audioOutputManager,
+                        usageMonitor: aiUsageMonitor,
+                        systemMonitor: systemStatsMonitor,
+                        shelf: fileShelfModel,
+                        micMute: micMuteManager,
+                        width: layout.musicPlayerSize.width,
+                        isShelfDropTargeted: isShelfDropTargeted,
+                        meeting: liveActivityModel.activity,
+                        onDismissMeeting: {
+                            withAnimation(.smooth(duration: 0.3, extraBounce: 0)) {
+                                liveActivityModel.dismissMeeting()
+                            }
+                        }
+                    )
+                        .offset(y: 20 + layout.musicPlayerSize.height - 12)
+                        .transition(ExtrasPanelView.transition)
+                        .zIndex(4)
+                }
             }
                 }
             }
@@ -236,10 +271,25 @@ extension ContentView {
                     }
                 }
 
-                if hasPendingAgentEvent {
+                if hasPendingAgentEvent && agentEvent?.approval == nil && (agentEvent?.buttons.isEmpty ?? true) {
                     IslandClickCatcher {
                         openAgentSourceApp(agentEvent)
                     }
+                }
+
+                if hasPendingAgentEvent && agentEvent?.approval == nil {
+                    VStack {
+                        HStack {
+                            Spacer()
+                            NoticeCloseButton {
+                                agentEventManager.dismissCurrentEvent()
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(.top, 12)
+                    .padding(.trailing, layout.cornerRadius + 10)
+                    .transition(.opacity)
                 }
 
                 if status != .opened && !hasPendingAgentEvent {

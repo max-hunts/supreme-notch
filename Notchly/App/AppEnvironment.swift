@@ -48,6 +48,55 @@ final class AppEnvironment {
 
     lazy var batteryManager = BatteryManager(musicManager: musicManager)
 
+    lazy var downloadGlanceManager = DownloadGlanceManager(
+        settingsManager: settingsManager,
+        agentEventManager: agentEventManager
+    )
+
+    lazy var calendarGlanceManager = CalendarGlanceManager(
+        settingsManager: settingsManager,
+        agentEventManager: agentEventManager
+    )
+
+    lazy var liveActivityModel = LiveActivityModel(
+        settingsManager: settingsManager,
+        calendar: calendarGlanceManager
+    )
+
+    lazy var airPodsGlanceManager = AirPodsGlanceManager(
+        settingsManager: settingsManager,
+        agentEventManager: agentEventManager
+    )
+
+    lazy var accessoryBatteryWarningManager = AccessoryBatteryWarningManager(
+        settingsManager: settingsManager,
+        agentEventManager: agentEventManager
+    )
+
+    lazy var externalDriveGlanceManager = ExternalDriveGlanceManager(
+        settingsManager: settingsManager,
+        agentEventManager: agentEventManager
+    )
+
+    lazy var diskSpaceGlanceManager = DiskSpaceGlanceManager(
+        settingsManager: settingsManager,
+        agentEventManager: agentEventManager
+    )
+
+    let portsMonitor = ListeningPortsMonitor()
+    let extrasPanelModel = ExtrasPanelModel()
+
+    let aiUsageMonitor = AIUsageMonitor()
+    let systemStatsMonitor = SystemStatsMonitor()
+    let fileShelfModel = FileShelfModel()
+    let micMuteManager = MicMuteManager()
+    let fileDragWatcher = FileDragWatcher()
+
+    lazy var audioOutputManager = AudioOutputManager(
+        settingsManager: settingsManager,
+        agentEventManager: agentEventManager
+    )
+
     lazy var dynamicManager = DynamicManager(
         batteryManager: batteryManager,
         musicManager: musicManager,

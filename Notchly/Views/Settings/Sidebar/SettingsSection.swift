@@ -14,6 +14,8 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
     case sound = "Sound"
     case music = "Now Playing"
     case codex = "AI Agents"
+    case usage = "AI Usage"
+    case glances = "Glances"
     case battery = "Battery"
     case about = "About"
 
@@ -33,6 +35,10 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
             return "music.note"
         case .codex:
             return "sparkles"
+        case .usage:
+            return "gauge.with.dots.needle.50percent"
+        case .glances:
+            return "eye.fill"
         case .battery:
             return "bolt.fill"
         case .about:
@@ -54,6 +60,10 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
             return .red
         case .codex:
             return .mint
+        case .usage:
+            return .orange
+        case .glances:
+            return .teal
         case .battery:
             return .green
         case .about:
@@ -75,6 +85,10 @@ enum SettingsSection: String, CaseIterable, Identifiable, Hashable {
             return "Customize now playing controls and previews."
         case .codex:
             return "Configure agent hooks, sounds, and alert timing."
+        case .usage:
+            return "Claude and Codex plan limits, and the keys used to read them."
+        case .glances:
+            return "Downloads, AirPods battery, and upcoming meetings."
         case .battery:
             return "Control battery indicators and charging feedback."
         case .about:

@@ -86,6 +86,28 @@ final class SettingsManager: ObservableObject {
         static let enableCodexApprovalAlertSound = false
         static let enableCodexCompletedAlertSound = false
         static let codexCompletedAlertDuration = 2.2
+        static let approveFromNotch = true
+        static let approvalWaitSeconds = 45.0
+        static let showCompletionSummary = true
+        static let showDownloadGlance = true
+        static let showCalendarGlance = true
+        static let calendarLeadMinutes = 5.0
+        static let showAirPodsGlance = true
+        static let showAccessoryBatteryWarning = true
+        static let showDriveGlance = true
+        static let showLowDiskWarning = true
+        static let showDownloadProgress = true
+        static let showPortsPanel = true
+        static let showAgentSessions = true
+        static let showMeetingCountdown = true
+        static let showUsageTab = true
+        static let showSystemTab = true
+        static let showFileShelf = true
+        static let showMicMute = true
+        static let openOnHover = true
+        static let showQuickNote = true
+        static let showOutputPicker = true
+        static let showAudioOutputGlance = true
     }
 
     @Published var showBattery: Bool {
@@ -223,6 +245,99 @@ final class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(codexCompletedAlertDuration, forKey: "codexCompletedAlertDuration") }
     }
 
+    @Published var approveFromNotch: Bool {
+        didSet { UserDefaults.standard.set(approveFromNotch, forKey: "approveFromNotch") }
+    }
+
+    @Published var approvalWaitSeconds: Double {
+        didSet { UserDefaults.standard.set(approvalWaitSeconds, forKey: "approvalWaitSeconds") }
+    }
+
+    @Published var showCompletionSummary: Bool {
+        didSet { UserDefaults.standard.set(showCompletionSummary, forKey: "showCompletionSummary") }
+    }
+
+    @Published var showDownloadGlance: Bool {
+        didSet { UserDefaults.standard.set(showDownloadGlance, forKey: "showDownloadGlance") }
+    }
+
+    @Published var showCalendarGlance: Bool {
+        didSet { UserDefaults.standard.set(showCalendarGlance, forKey: "showCalendarGlance") }
+    }
+
+    /// Calendars the meeting reminder skips, by EventKit calendar identifier.
+    @Published var calendarExcludedIDs: [String] {
+        didSet { UserDefaults.standard.set(calendarExcludedIDs, forKey: "calendarExcludedIDs") }
+    }
+
+    @Published var calendarLeadMinutes: Double {
+        didSet { UserDefaults.standard.set(calendarLeadMinutes, forKey: "calendarLeadMinutes") }
+    }
+
+    @Published var showAirPodsGlance: Bool {
+        didSet { UserDefaults.standard.set(showAirPodsGlance, forKey: "showAirPodsGlance") }
+    }
+
+    @Published var showAccessoryBatteryWarning: Bool {
+        didSet { UserDefaults.standard.set(showAccessoryBatteryWarning, forKey: "showAccessoryBatteryWarning") }
+    }
+
+    @Published var showDriveGlance: Bool {
+        didSet { UserDefaults.standard.set(showDriveGlance, forKey: "showDriveGlance") }
+    }
+
+    @Published var showLowDiskWarning: Bool {
+        didSet { UserDefaults.standard.set(showLowDiskWarning, forKey: "showLowDiskWarning") }
+    }
+
+    @Published var showDownloadProgress: Bool {
+        didSet { UserDefaults.standard.set(showDownloadProgress, forKey: "showDownloadProgress") }
+    }
+
+    @Published var showPortsPanel: Bool {
+        didSet { UserDefaults.standard.set(showPortsPanel, forKey: "showPortsPanel") }
+    }
+
+    @Published var showAgentSessions: Bool {
+        didSet { UserDefaults.standard.set(showAgentSessions, forKey: "showAgentSessions") }
+    }
+
+    @Published var showMeetingCountdown: Bool {
+        didSet { UserDefaults.standard.set(showMeetingCountdown, forKey: "showMeetingCountdown") }
+    }
+
+    @Published var showUsageTab: Bool {
+        didSet { UserDefaults.standard.set(showUsageTab, forKey: "showUsageTab") }
+    }
+
+    @Published var showSystemTab: Bool {
+        didSet { UserDefaults.standard.set(showSystemTab, forKey: "showSystemTab") }
+    }
+
+    @Published var showFileShelf: Bool {
+        didSet { UserDefaults.standard.set(showFileShelf, forKey: "showFileShelf") }
+    }
+
+    @Published var showMicMute: Bool {
+        didSet { UserDefaults.standard.set(showMicMute, forKey: "showMicMute") }
+    }
+
+    @Published var openOnHover: Bool {
+        didSet { UserDefaults.standard.set(openOnHover, forKey: "openOnHover") }
+    }
+
+    @Published var showQuickNote: Bool {
+        didSet { UserDefaults.standard.set(showQuickNote, forKey: "showQuickNote") }
+    }
+
+    @Published var showOutputPicker: Bool {
+        didSet { UserDefaults.standard.set(showOutputPicker, forKey: "showOutputPicker") }
+    }
+
+    @Published var showAudioOutputGlance: Bool {
+        didSet { UserDefaults.standard.set(showAudioOutputGlance, forKey: "showAudioOutputGlance") }
+    }
+
     init() {
         self.showBattery = UserDefaults.standard.object(forKey: "showBattery") as? Bool ?? Defaults.showBattery
         self.showMusic = UserDefaults.standard.object(forKey: "showMusic") as? Bool ?? Defaults.showMusic
@@ -254,6 +369,31 @@ final class SettingsManager: ObservableObject {
         self.enableCodexApprovalAlertSound = UserDefaults.standard.object(forKey: "enableCodexApprovalAlertSound") as? Bool ?? legacyCodexAlertSound ?? Defaults.enableCodexApprovalAlertSound
         self.enableCodexCompletedAlertSound = UserDefaults.standard.object(forKey: "enableCodexCompletedAlertSound") as? Bool ?? legacyCodexAlertSound ?? Defaults.enableCodexCompletedAlertSound
         self.codexCompletedAlertDuration = UserDefaults.standard.object(forKey: "codexCompletedAlertDuration") as? Double ?? Defaults.codexCompletedAlertDuration
+
+        self.approveFromNotch = UserDefaults.standard.object(forKey: "approveFromNotch") as? Bool ?? Defaults.approveFromNotch
+        self.approvalWaitSeconds = UserDefaults.standard.object(forKey: "approvalWaitSeconds") as? Double ?? Defaults.approvalWaitSeconds
+        self.showCompletionSummary = UserDefaults.standard.object(forKey: "showCompletionSummary") as? Bool ?? Defaults.showCompletionSummary
+        self.showDownloadGlance = UserDefaults.standard.object(forKey: "showDownloadGlance") as? Bool ?? Defaults.showDownloadGlance
+        self.showCalendarGlance = UserDefaults.standard.object(forKey: "showCalendarGlance") as? Bool ?? Defaults.showCalendarGlance
+        self.calendarLeadMinutes = UserDefaults.standard.object(forKey: "calendarLeadMinutes") as? Double ?? Defaults.calendarLeadMinutes
+        self.calendarExcludedIDs = UserDefaults.standard.stringArray(forKey: "calendarExcludedIDs") ?? []
+        self.showAirPodsGlance = UserDefaults.standard.object(forKey: "showAirPodsGlance") as? Bool ?? Defaults.showAirPodsGlance
+
+        self.showAccessoryBatteryWarning = UserDefaults.standard.object(forKey: "showAccessoryBatteryWarning") as? Bool ?? Defaults.showAccessoryBatteryWarning
+        self.showDriveGlance = UserDefaults.standard.object(forKey: "showDriveGlance") as? Bool ?? Defaults.showDriveGlance
+        self.showLowDiskWarning = UserDefaults.standard.object(forKey: "showLowDiskWarning") as? Bool ?? Defaults.showLowDiskWarning
+        self.showDownloadProgress = UserDefaults.standard.object(forKey: "showDownloadProgress") as? Bool ?? Defaults.showDownloadProgress
+        self.showPortsPanel = UserDefaults.standard.object(forKey: "showPortsPanel") as? Bool ?? Defaults.showPortsPanel
+        self.showAgentSessions = UserDefaults.standard.object(forKey: "showAgentSessions") as? Bool ?? Defaults.showAgentSessions
+        self.showMeetingCountdown = UserDefaults.standard.object(forKey: "showMeetingCountdown") as? Bool ?? Defaults.showMeetingCountdown
+        self.showUsageTab = UserDefaults.standard.object(forKey: "showUsageTab") as? Bool ?? Defaults.showUsageTab
+        self.showSystemTab = UserDefaults.standard.object(forKey: "showSystemTab") as? Bool ?? Defaults.showSystemTab
+        self.showFileShelf = UserDefaults.standard.object(forKey: "showFileShelf") as? Bool ?? Defaults.showFileShelf
+        self.showMicMute = UserDefaults.standard.object(forKey: "showMicMute") as? Bool ?? Defaults.showMicMute
+        self.openOnHover = UserDefaults.standard.object(forKey: "openOnHover") as? Bool ?? Defaults.openOnHover
+        self.showQuickNote = UserDefaults.standard.object(forKey: "showQuickNote") as? Bool ?? Defaults.showQuickNote
+        self.showOutputPicker = UserDefaults.standard.object(forKey: "showOutputPicker") as? Bool ?? Defaults.showOutputPicker
+        self.showAudioOutputGlance = UserDefaults.standard.object(forKey: "showAudioOutputGlance") as? Bool ?? Defaults.showAudioOutputGlance
 
         normalizeStatusDisplayModes()
     }
@@ -307,6 +447,31 @@ final class SettingsManager: ObservableObject {
         enableCodexApprovalAlertSound = Defaults.enableCodexApprovalAlertSound
         enableCodexCompletedAlertSound = Defaults.enableCodexCompletedAlertSound
         codexCompletedAlertDuration = Defaults.codexCompletedAlertDuration
+        approveFromNotch = Defaults.approveFromNotch
+        approvalWaitSeconds = Defaults.approvalWaitSeconds
+        showCompletionSummary = Defaults.showCompletionSummary
+    }
+
+    func resetGlanceSettings() {
+        showDownloadGlance = Defaults.showDownloadGlance
+        showCalendarGlance = Defaults.showCalendarGlance
+        calendarLeadMinutes = Defaults.calendarLeadMinutes
+        showAirPodsGlance = Defaults.showAirPodsGlance
+        showAccessoryBatteryWarning = Defaults.showAccessoryBatteryWarning
+        showDriveGlance = Defaults.showDriveGlance
+        showLowDiskWarning = Defaults.showLowDiskWarning
+        showDownloadProgress = Defaults.showDownloadProgress
+        showPortsPanel = Defaults.showPortsPanel
+        showAgentSessions = Defaults.showAgentSessions
+        showMeetingCountdown = Defaults.showMeetingCountdown
+        showUsageTab = Defaults.showUsageTab
+        showSystemTab = Defaults.showSystemTab
+        showFileShelf = Defaults.showFileShelf
+        showMicMute = Defaults.showMicMute
+        openOnHover = Defaults.openOnHover
+        showQuickNote = Defaults.showQuickNote
+        showOutputPicker = Defaults.showOutputPicker
+        showAudioOutputGlance = Defaults.showAudioOutputGlance
     }
 
     private func normalizeStatusDisplayModes() {

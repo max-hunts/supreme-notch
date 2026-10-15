@@ -7,6 +7,7 @@
 
 import SwiftUI
 import AppKit
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @ObservedObject var batteryManager: BatteryManager
@@ -17,6 +18,23 @@ struct ContentView: View {
     @ObservedObject var brightnessManager: BrightnessManager
     @ObservedObject var networkStatusManager: NetworkStatusManager
     @ObservedObject var agentEventManager: AgentEventManager
+    @ObservedObject var portsMonitor: ListeningPortsMonitor
+    @ObservedObject var extrasPanelModel: ExtrasPanelModel
+    @ObservedObject var sessionTracker: AgentSessionTracker
+    @ObservedObject var audioOutputManager: AudioOutputManager
+    @ObservedObject var liveActivityModel: LiveActivityModel
+    @ObservedObject var aiUsageMonitor: AIUsageMonitor
+    @ObservedObject var systemStatsMonitor: SystemStatsMonitor
+    @ObservedObject var fileShelfModel: FileShelfModel
+    @ObservedObject var micMuteManager: MicMuteManager
+    @ObservedObject var fileDragWatcher: FileDragWatcher
+    /// Files are being dragged over the notch.
+    @State var isShelfDropTargeted = false
+    @State var shelfDropOpenedIsland = false
+    @State var hoverOpenTask: Task<Void, Never>?
+    @StateObject var wingWatcher = MenuBarWingWatcher()
+    /// Animated mirror of wingWatcher.isPointerBesideIsland.
+    @State var wingsTuckedState = false
     @ObservedObject var lockScreenOverlayModel: LockScreenOverlayModel
     let animationsEnabled: Bool
     let onClosedHeightChange: (CGFloat) -> Void
@@ -119,6 +137,12 @@ struct ContentView: View {
                     .onHover { hovering in
                         handleHover(hovering)
                     }
+                    .onDrop(of: [.fileURL], isTargeted: $isShelfDropTargeted) { providers in
+                        handleShelfDrop(providers)
+                    }
+                    .onChange(of: isShelfDropTargeted) { _, targeted in
+                        handleShelfDropTargetChange(targeted)
+                    }
                     .animation(.easeInOut(duration: 0.22), value: settingsManager.showBattery)
             }
         }
@@ -129,6 +153,27 @@ struct ContentView: View {
         islandRootView
         .onAppear {
             handleAppear()
+            wingWatcher.configure(screen: currentScreen, islandWidth: wingWatcherWidth)
+        }
+        .onChange(of: wingWatcherWidth) { _, width in
+            wingWatcher.configure(screen: currentScreen, islandWidth: width)
+        }
+        .onChange(of: settingsManager.showUsageTab, initial: true) { _, enabled in
+            if enabled { aiUsageMonitor.startBackground() } else { aiUsageMonitor.stopBackground() }
+        }
+        .onChange(of: islandStateSnapshot, initial: true) { _, snapshot in
+            IslandStateLog.record(snapshot)
+        }
+        .onChange(of: islandScreenFrame, initial: true) { _, frame in
+            fileDragWatcher.islandFrame = frame
+        }
+        .onChange(of: fileDragWatcher.isNearIsland) { _, near in
+            // A drop also ends "near"; that path keeps the island open longer.
+            guard near || Date().timeIntervalSince(fileDragWatcher.lastDropAt) > 1 else { return }
+            handleShelfDropTargetChange(near)
+        }
+        .onChange(of: fileDragWatcher.dropID) { _, _ in
+            handleWatcherDrop(fileDragWatcher.droppedURLs)
         }
         .onDisappear {
             handleDisappear()
@@ -168,7 +213,17 @@ struct ContentView: View {
         .onChange(of: lockScreenOverlayModel.state) { _, state in
             handleLockScreenStateChange(state)
         }
+        .onChange(of: wingWatcher.isPointerBesideIsland) { _, beside in
+            withAnimation(.smooth(duration: 0.34, extraBounce: 0)) {
+                wingsTuckedState = beside
+            }
+        }
         .onChange(of: status) { _, newValue in
+            // While you use the opened notch, new alerts wait until it closes.
+            agentEventManager.setHolding(newValue == .opened)
+            if newValue != .opened {
+                extrasPanelModel.commitNote()
+            }
             playPendingNetworkEventIfReady()
             guard newValue != .opened else { return }
             guard showMusicVolumeControl else { return }
@@ -237,6 +292,7 @@ struct ContentView: View {
             WindowScreenReader { screen in
                 guard currentScreen !== screen else { return }
                 currentScreen = screen
+                wingWatcher.configure(screen: screen, islandWidth: wingWatcherWidth)
                 updateClosedHeight(for: screen)
             }
         )

@@ -195,14 +195,49 @@ extension ContentView {
     func handleHover(_ hovering: Bool) {
         guard isPointerInsideIsland != hovering else { return }
 
+        if hovering, status == .closed, settingsManager.showPortsPanel {
+            // Fetch before the click so the island grows once, to its final height.
+            Task { await portsMonitor.refresh() }
+        }
+
         isPointerInsideIsland = hovering
 
         withAnimation(.interactiveSpring(duration: 0.28, extraBounce: 0.02)) {
             isHovered = hovering
         }
 
+        hoverOpenTask?.cancel()
+        hoverOpenTask = nil
+        if hovering, status == .closed, settingsManager.openOnHover {
+            // A short pause, so passing over the notch on the way somewhere does not open it.
+            hoverOpenTask = Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(200))
+                guard !Task.isCancelled else { return }
+                openFromHover()
+            }
+        }
+
         if !hovering, status == .opened || status == .musicPreview {
-            scheduleAutoClose(after: 0.15)
+            // A short grace period so moving off the edge for a moment does not close it.
+            scheduleAutoClose(after: status == .opened ? 0.7 : 0.15)
+        }
+    }
+
+    private func openFromHover() {
+        guard isPointerInsideIsland, status == .closed, !wingWatcher.isPointerBesideIsland,
+              activeAgentEvent == nil, !showChargingPop, !presentsLockIsland else { return }
+
+        let canOpen: Bool
+        if settingsManager.showMusic && musicManager.hasNowPlayingContent {
+            canOpen = true
+        } else {
+            canOpen = dynamicManager.currentModule == .battery && settingsManager.showBattery
+        }
+        guard canOpen else { return }
+
+        autoExpandMusicTask?.cancel()
+        withAnimation(animation) {
+            status = .opened
         }
     }
 
@@ -333,6 +368,8 @@ extension ContentView {
 
     func remainingAgentPresentationDelay() -> TimeInterval {
         guard let displayedAgentEvent, displayedAgentEvent.kind == .completed else { return 0 }
+        // Closed with X or Dismiss: hide now.
+        if displayedAgentEvent.id == agentEventManager.explicitlyDismissedID { return 0 }
         guard let agentPresentationStartedAt else { return 0 }
 
         let minimumDuration = displayedAgentEvent.ttl
@@ -611,7 +648,33 @@ extension ContentView {
     }
 
     func openAgentSourceApp(_ event: AgentEvent?) {
+        switch event?.action {
+        case let .ejectVolume(url):
+            VolumeEjector.eject(url, agentEventManager: agentEventManager)
+            return
+        case .dismiss:
+            agentEventManager.dismissCurrentGlance()
+            return
+        case nil:
+            break
+        }
+
+        if let url = event?.actionURL {
+            if url.isFileURL {
+                NSWorkspace.shared.activateFileViewerSelecting([url])
+            } else {
+                NSWorkspace.shared.open(url)
+            }
+            return
+        }
+
         guard let source = event?.source.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() else { return }
+
+        // Agent alerts open the session they came from when it can be found.
+        if let sessionID = event?.sessionID, source == "claude" || source == "codex",
+           sessionTracker.open(sessionID: sessionID, source: source) {
+            return
+        }
 
         let workspace = NSWorkspace.shared
 
@@ -700,6 +763,8 @@ extension ContentView {
             await MainActor.run {
                 guard status == .opened || status == .musicPreview else { return }
                 guard !isPointerInsideIsland else { return }
+                // Never close under someone who is typing a note.
+                guard !extrasPanelModel.isEditingNote else { return }
 
                 withAnimation(animation) {
                     status = .closed
