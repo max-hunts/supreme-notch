@@ -717,9 +717,9 @@ final class SkyLightOverlayController {
     }
 
     private var islandWindowSize: CGSize {
-        // Tall enough for the music player with volume open plus six 40 pt rows, and
+        // Tall enough for the music player with volume open plus six listening ports, and
         // wide enough for the widest tab. Clicks pass through its transparent parts.
-        CGSize(width: IslandCanvas.width, height: 560)
+        CGSize(width: IslandCanvas.width, height: 470)
     }
 
     private func lockScreenPlayerYPosition(for screen: NSScreen) -> CGFloat {

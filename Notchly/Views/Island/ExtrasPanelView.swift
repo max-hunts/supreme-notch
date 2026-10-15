@@ -193,9 +193,10 @@ struct ExtrasPanelView: View {
     static func contentGap(for tab: ExtrasPanelModel.Tab?) -> CGFloat {
         tab == .system ? 10 : 0
     }
-    static let bottomPadding: CGFloat = IslandMetrics.edgeInset
-    static let agentRowHeight: CGFloat = IslandMetrics.concentricRowHeight
-    static let outputRowHeight: CGFloat = IslandMetrics.concentricRowHeight
+    /// Room under the last row, so a hovered row's corners run parallel to the notch's.
+    static let bottomPadding: CGFloat = IslandMetrics.rowEdgeInset
+    static let agentRowHeight: CGFloat = IslandMetrics.rowHeight
+    static let outputRowHeight: CGFloat = IslandMetrics.rowHeight
     static let noteHeight: CGFloat = 54
 
     /// The battery panel and music player when the notch opens: fade in while sliding

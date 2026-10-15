@@ -163,7 +163,7 @@ private struct OpenedIsland: View {
 
     var body: some View {
         let width: CGFloat = tab == .agents
-            ? min(max(AgentRowMetrics.contentWidth(for: environment.agentEventManager.sessionTracker.sessions) + 32, 384), IslandLayout.maxOpenedWidth)
+            ? min(max(AgentRowMetrics.contentWidth(for: environment.agentEventManager.sessionTracker.sessions) + 2 * (IslandMetrics.rowEdgeInset + IslandMetrics.rowContentPadding), 384), IslandLayout.maxOpenedWidth)
             : 384
         let extras = ExtrasPanelView.height(
             tab: tab,

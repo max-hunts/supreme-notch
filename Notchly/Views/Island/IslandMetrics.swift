@@ -20,9 +20,15 @@ enum IslandMetrics {
     /// Corner radius of the opened notch.
     static let openedRadius: CGFloat = 32
     static let buttonHeight: CGFloat = 30
-    /// A clickable row tall enough that its highlight's rounded ends match the opened
-    /// notch's corners: twice the concentric radius (32 - 12 = 20, so 40 pt).
-    static let concentricRowHeight: CGFloat = (openedRadius - edgeInset) * 2
+
+    /// Clickable rows in the opened panels, and their pill-shaped hover highlight.
+    static let rowHeight: CGFloat = 24
+    static var rowRadius: CGFloat { rowHeight / 2 }
+    /// Island edge to a row highlight. Corners run parallel when the inner radius plus
+    /// this gap equals the outer radius: 32 - 12 = 20.
+    static var rowEdgeInset: CGFloat { openedRadius - rowRadius }
+    /// Highlight edge to the row's icon and text.
+    static let rowContentPadding: CGFloat = 8
 
     /// A corner that runs parallel to an island corner of radius `outer`, limited to a
     /// pill for short controls.
@@ -36,27 +42,24 @@ enum IslandMetrics {
     }
 }
 
-/// A clickable row in an opened panel: highlights on hover, with the highlight inset by
-/// `IslandMetrics.edgeInset` from the island's sides and concentric with its corners.
+/// A clickable row in an opened panel: highlights on hover. The highlight sits
+/// `rowEdgeInset` from the island's sides and bottom so its rounded ends run parallel to
+/// the notch's corners; the row's content sits `rowContentPadding` inside it.
 struct IslandHoverRow: ViewModifier {
     let height: CGFloat
     @State private var isHovered = false
 
-    private var outset: CGFloat { IslandMetrics.contentInset - IslandMetrics.edgeInset }
-
     func body(content: Content) -> some View {
         content
-            .padding(.horizontal, outset)
+            .padding(.horizontal, IslandMetrics.rowContentPadding)
             .frame(height: height)
             .background(
-                RoundedRectangle(
-                    cornerRadius: IslandMetrics.concentricRadius(outer: IslandMetrics.openedRadius, height: height),
-                    style: .continuous
-                )
-                .fill(Color.white.opacity(isHovered || SnapshotRendering.showsRowHighlights ? 0.1 : 0))
+                RoundedRectangle(cornerRadius: IslandMetrics.rowRadius, style: .continuous)
+                    .fill(Color.white.opacity(isHovered || SnapshotRendering.showsRowHighlights ? 0.1 : 0))
             )
             .contentShape(Rectangle())
-            .padding(.horizontal, -outset)
+            // The panel already insets its content by `contentInset`; move in the rest.
+            .padding(.horizontal, IslandMetrics.rowEdgeInset - IslandMetrics.contentInset)
             .onHover { hovering in
                 withAnimation(.easeOut(duration: 0.12)) { isHovered = hovering }
                 if hovering { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }

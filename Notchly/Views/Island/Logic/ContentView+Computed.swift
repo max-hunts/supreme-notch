@@ -48,7 +48,7 @@ extension ContentView {
         case .agents:
             // Grows to fit the longest session name and step, up to the window's limit.
             let sessions = Array(sessionTracker.sessions.prefix(6))
-            wanted = min(max(AgentRowMetrics.contentWidth(for: sessions) + 32, 384), IslandLayout.maxOpenedWidth)
+            wanted = min(max(AgentRowMetrics.contentWidth(for: sessions) + 2 * (IslandMetrics.rowEdgeInset + IslandMetrics.rowContentPadding), 384), IslandLayout.maxOpenedWidth)
         case .ports, .system, .shelf, .usage:
             wanted = 384
         case .note, .output:
