@@ -222,6 +222,10 @@ final class AgentSessionTracker: ObservableObject {
             }
         }
         if let hint, hint.hasPrefix("cmd:") {
+            // Codex sends file patches as a command that starts "*** Begin Patch".
+            if hint.dropFirst(4).hasPrefix("***") || lower == "apply_patch" {
+                return "Editing files"
+            }
             // "/Users/me/.venv/bin/python3 build.py" reads better as "python3 build.py".
             let command = hint.dropFirst(4)
                 .split(separator: " ")

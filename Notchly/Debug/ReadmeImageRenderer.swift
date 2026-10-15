@@ -79,7 +79,7 @@ enum ReadmeImageRenderer {
                          stateSince: now.addingTimeInterval(-312), currentStep: "Editing StatusRingGlyph.swift", lastActivity: now),
             AgentSession(id: "s2", source: "codex", project: "referenced-chatgpt-conversation", title: "Create heating prototype snapshot",
                          pid: nil, state: .working, stateSince: now.addingTimeInterval(-40),
-                         currentStep: AgentSessionTracker.stepText(toolName: "exec_command", hint: "cmd:/Users/me/.venv/lib/python/bin/python3 snapshot.py"),
+                         currentStep: AgentSessionTracker.stepText(toolName: "exec_command", hint: "cmd:*** Begin"),
                          lastActivity: now),
             AgentSession(id: "s3", source: "claude", project: "docs-site", pid: nil, state: .waiting,
                          stateSince: now.addingTimeInterval(-95), currentStep: nil, lastActivity: now),

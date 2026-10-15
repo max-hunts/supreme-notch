@@ -510,10 +510,11 @@ private struct AgentSessionsListView: View {
 
 /// Sizes for an Agents row; the tab width is worked out from them.
 enum AgentRowMetrics {
-    static let maxNameWidth: CGFloat = 190
+    static let maxNameWidth: CGFloat = 280
     static let maxStatusWidth: CGFloat = 210
-    /// Icon, spacing, status dot and time: everything in a row except the two texts.
-    static let fixedWidth: CGFloat = 16 + 8 + 6 + 18 + 5 + 8 + 30
+    /// Everything in a row except the two texts: icon 16, four 8 pt gaps, the 6 pt
+    /// minimum spacer, status dots 18 plus 5, time 30, and a few points of slack.
+    static let fixedWidth: CGFloat = 16 + 4 * 8 + 6 + 18 + 5 + 30 + 4
     static let nameFont = NSFont.systemFont(ofSize: 12, weight: .medium)
     static let statusFont = NSFont.systemFont(ofSize: 11, weight: .medium)
 

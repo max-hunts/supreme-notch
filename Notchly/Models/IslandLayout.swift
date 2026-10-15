@@ -63,7 +63,7 @@ struct IslandLayout {
     }
 
     /// The widest opened island that still fits the window with its rounded corners.
-    static let maxOpenedWidth: CGFloat = 464
+    static let maxOpenedWidth: CGFloat = 544
 
     var openedSize: CGSize {
         CGSize(width: openedWidth, height: 132 + openedExtraHeight)
