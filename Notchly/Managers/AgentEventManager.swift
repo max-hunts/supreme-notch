@@ -307,7 +307,12 @@ final class AgentEventManager: ObservableObject {
         case .dismiss:
             break
         }
-        dismissGlance(source: event.source)
+        // Any button finishes the alert it belongs to, agent alerts included.
+        if currentEvent?.id == event.id {
+            dismissCurrentEvent()
+        } else {
+            dismissGlance(source: event.source)
+        }
     }
 
     /// Shows the parked sticky glance again, or empties the island.
@@ -598,7 +603,7 @@ final class AgentEventManager: ObservableObject {
            [.completed, .failed, .waiting, .accessRequest].contains(kind) {
             if detail == nil {
                 let session = sessionTracker.sessions.first { $0.id == sessionID }
-                detail = session?.project ?? (message?.isEmpty == false ? message : nil)
+                detail = session?.displayName ?? (message?.isEmpty == false ? message : nil)
             }
             if detail != nil {
                 buttons = [GlanceButton(
@@ -762,6 +767,10 @@ final class AgentEventManager: ObservableObject {
         let tool = (object["tool_name"] as? String) ?? toolName ?? "Tool"
         let input = object["tool_input"] as? [String: Any] ?? [:]
         let cwd = object["cwd"] as? String
+        let resolvedSessionID = sessionID ?? (object["session_id"] as? String)
+        // The session's own title (a Codex thread name) reads better than its folder.
+        let projectName = sessionTracker.sessions.first { $0.id == resolvedSessionID }?.title
+            ?? cwd.map { URL(fileURLWithPath: $0).lastPathComponent }
 
         // A question is not a permission: let the agent show it, and point to the session.
         if tool == "AskUserQuestion" {
@@ -770,7 +779,7 @@ final class AgentEventManager: ObservableObject {
                 source: source,
                 sessionID: sessionID ?? (object["session_id"] as? String),
                 input: input,
-                project: cwd.map { URL(fileURLWithPath: $0).lastPathComponent }
+                project: projectName
             )
             return
         }
@@ -786,7 +795,7 @@ final class AgentEventManager: ObservableObject {
             toolLabel: description.label,
             summary: description.summary,
             detail: description.detail,
-            project: cwd.map { URL(fileURLWithPath: $0).lastPathComponent },
+            project: projectName,
             receivedAt: now,
             deadline: now.addingTimeInterval(wait + 3)
         )

@@ -483,7 +483,7 @@ private struct AgentSessionsListView: View {
                         }
                         .buttonStyle(.plain)
                         .frame(height: ExtrasPanelView.agentRowHeight)
-                        .help(Text(verbatim: "\(session.sourceLabel) in \(session.project ?? "this session") · click to show it"))
+                        .help(Text(verbatim: "\(session.sourceLabel) · \(session.displayName) · click to show it"))
                     }
                 }
             }
@@ -511,11 +511,12 @@ private struct AgentSessionRow: View {
             }
             .frame(width: 16, height: 16)
 
-            Text(verbatim: session.project ?? session.sourceLabel)
+            Text(verbatim: session.displayName)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.white.opacity(0.9))
                 .lineLimit(1)
-                .layoutPriority(2)
+                .truncationMode(.tail)
+                .layoutPriority(1)
 
             Spacer(minLength: 6)
 
@@ -529,11 +530,13 @@ private struct AgentSessionRow: View {
                 }
                 // While working, say what it is doing, such as "Editing ContentView.swift".
                 if session.state == .working, let step = session.currentStep {
+                    // Capped so a long step cannot crowd out the session name either.
                     Text(verbatim: step)
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(stateColor)
                         .lineLimit(1)
                         .truncationMode(.middle)
+                        .frame(maxWidth: 170, alignment: .trailing)
                 } else {
                     Text(session.state.label)
                         .font(.system(size: 11, weight: .medium))
@@ -541,7 +544,7 @@ private struct AgentSessionRow: View {
                         .lineLimit(1)
                 }
             }
-            .layoutPriority(1)
+            .layoutPriority(2)
 
             Text(verbatim: relative(session.lastActivity))
                 .font(.system(size: 10.5, weight: .medium).monospacedDigit())

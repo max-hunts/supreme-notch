@@ -33,6 +33,8 @@ nonisolated struct AgentSession: Identifiable, Equatable {
     let id: String
     let source: String
     var project: String?
+    /// The agent's own name for the conversation, when it keeps one (Codex threads).
+    var title: String? = nil
     var pid: pid_t?
     var state: State
     /// When the current state began; a working session's elapsed time counts from here.
@@ -44,6 +46,11 @@ nonisolated struct AgentSession: Identifiable, Equatable {
     var sourceLabel: String {
         source == "codex" ? "Codex" : "Claude Code"
     }
+
+    /// What the Agents tab and alerts call this session.
+    var displayName: String {
+        title ?? project ?? sourceLabel
+    }
 }
 
 @MainActor
@@ -52,6 +59,8 @@ final class AgentSessionTracker: ObservableObject {
 
     private var byID: [String: AgentSession] = [:]
     private var pruneTask: Task<Void, Never>?
+    /// Codex names a thread after its first turn, so the title is looked up again until found.
+    private var titleLookups: [String: Date] = [:]
 
     /// Sessions shown in the panel, most recent first.
     var visibleSessions: [AgentSession] {
@@ -92,12 +101,18 @@ final class AgentSessionTracker: ObservableObject {
         if let pid, pid > 1 {
             session.pid = pid_t(pid)
         }
+        if source == "codex", session.title == nil,
+           now.timeIntervalSince(titleLookups[sessionID] ?? .distantPast) > 5 {
+            titleLookups[sessionID] = now
+            session.title = Self.codexThreadName(for: sessionID)
+        }
         session.lastActivity = now
         let previousState = session.state
 
         switch (kind, hookEvent ?? "") {
         case (_, "SessionEnd"):
             byID.removeValue(forKey: sessionID)
+            titleLookups.removeValue(forKey: sessionID)
             publish()
             return
         case (.accessRequest, _):
@@ -280,6 +295,26 @@ final class AgentSessionTracker: ObservableObject {
               threadID.allSatisfy({ $0.isHexDigit || $0 == "-" }),
               let url = URL(string: "codex://threads/\(threadID)") else { return false }
         return NSWorkspace.shared.open(url)
+    }
+
+    /// Codex keeps each thread's title in ~/.codex/session_index.jsonl. The ChatGPT app's
+    /// working folder is only a slug of the first message, so the title reads better.
+    nonisolated static func codexThreadName(for threadID: String) -> String? {
+        let url = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent(".codex/session_index.jsonl")
+        guard let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue,
+              size <= 4_000_000,
+              let text = try? String(contentsOf: url, encoding: .utf8) else { return nil }
+        var name: String?
+        // Later lines win: a thread is re-listed when it is renamed.
+        for line in text.split(separator: "\n") where line.contains(threadID) {
+            guard let object = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
+                  object["id"] as? String == threadID,
+                  let title = (object["thread_name"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  !title.isEmpty else { continue }
+            name = title
+        }
+        return name
     }
 
     nonisolated static func owningApplication(of pid: pid_t) -> NSRunningApplication? {
