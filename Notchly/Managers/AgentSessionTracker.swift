@@ -154,13 +154,20 @@ final class AgentSessionTracker: ObservableObject {
             activate(session)
             return true
         }
-        return source == "claude" && ClaudeDesktopSessionLocator.open(cliSessionID: sessionID)
+        switch source {
+        case "claude": return ClaudeDesktopSessionLocator.open(cliSessionID: sessionID)
+        case "codex": return Self.openCodexThread(sessionID, pid: nil)
+        default: return false
+        }
     }
 
     /// Brings the session to the front: the exact session in the Claude app when it runs
     /// there, otherwise the app or terminal that runs it.
     func activate(_ session: AgentSession) {
         if session.source == "claude", ClaudeDesktopSessionLocator.open(cliSessionID: session.id) {
+            return
+        }
+        if session.source == "codex", Self.openCodexThread(session.id, pid: session.pid) {
             return
         }
         if let pid = session.pid, let app = Self.owningApplication(of: pid) {
@@ -260,6 +267,21 @@ final class AgentSessionTracker: ObservableObject {
 
     /// Walks up from the hook's parent process to the first regular app, such as
     /// Terminal, Warp, iTerm, Cursor, or the Claude and Codex desktop apps.
+    /// Opens the exact thread in the ChatGPT app, whose Codex runs as a helper inside it.
+    /// The hook's session ID is the thread ID. A Codex CLI running in a terminal returns
+    /// false so the terminal is brought forward instead.
+    static func openCodexThread(_ threadID: String, pid: pid_t?) -> Bool {
+        let codexAppID = "com.openai.codex"
+        if let pid, let app = owningApplication(of: pid), app.bundleIdentifier != codexAppID {
+            return false
+        }
+        guard NSWorkspace.shared.urlForApplication(withBundleIdentifier: codexAppID) != nil,
+              !threadID.isEmpty,
+              threadID.allSatisfy({ $0.isHexDigit || $0 == "-" }),
+              let url = URL(string: "codex://threads/\(threadID)") else { return false }
+        return NSWorkspace.shared.open(url)
+    }
+
     nonisolated static func owningApplication(of pid: pid_t) -> NSRunningApplication? {
         var current = pid
         for _ in 0..<12 {
