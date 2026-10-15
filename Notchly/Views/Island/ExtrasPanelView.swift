@@ -464,6 +464,7 @@ struct MicMuteButton: View {
 
 private struct AgentSessionsListView: View {
     @ObservedObject var tracker: AgentSessionTracker
+    @State private var hoveredID: String?
 
     var body: some View {
         if tracker.sessions.isEmpty {
@@ -479,15 +480,55 @@ private struct AgentSessionsListView: View {
                             tracker.activate(session)
                         } label: {
                             AgentSessionRow(session: session, now: context.date)
+                                .padding(.horizontal, 8)
+                                .frame(height: ExtrasPanelView.agentRowHeight)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                                        .fill(Color.white.opacity(hoveredID == session.id ? 0.1 : 0))
+                                )
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
-                        .frame(height: ExtrasPanelView.agentRowHeight)
+                        .padding(.horizontal, -8)
+                        .onHover { hovering in
+                            withAnimation(.easeOut(duration: 0.12)) {
+                                if hovering {
+                                    hoveredID = session.id
+                                } else if hoveredID == session.id {
+                                    hoveredID = nil
+                                }
+                            }
+                            if hovering { NSCursor.pointingHand.set() } else { NSCursor.arrow.set() }
+                        }
                         .help(Text(verbatim: "\(session.sourceLabel) · \(session.displayName) · click to show it"))
                     }
                 }
             }
         }
+    }
+}
+
+/// Sizes for an Agents row; the tab width is worked out from them.
+enum AgentRowMetrics {
+    static let maxNameWidth: CGFloat = 190
+    static let maxStatusWidth: CGFloat = 210
+    /// Icon, spacing, status dot and time: everything in a row except the two texts.
+    static let fixedWidth: CGFloat = 16 + 8 + 6 + 18 + 5 + 8 + 30
+    static let nameFont = NSFont.systemFont(ofSize: 12, weight: .medium)
+    static let statusFont = NSFont.systemFont(ofSize: 11, weight: .medium)
+
+    /// Width of the widest row's content, each text up to its cap.
+    static func contentWidth(for sessions: [AgentSession]) -> CGFloat {
+        sessions.map { session in
+            let name = (session.displayName as NSString).size(withAttributes: [.font: nameFont]).width
+            return min(ceil(name) + 2, maxNameWidth) + statusWidth(for: session) + fixedWidth
+        }.max() ?? 0
+    }
+
+    /// The status text's own width, up to its cap, so it never claims space it does not use.
+    static func statusWidth(for session: AgentSession) -> CGFloat {
+        let width = (session.statusText as NSString).size(withAttributes: [.font: statusFont]).width
+        return min(ceil(width) + 2, maxStatusWidth)
     }
 }
 
@@ -536,7 +577,7 @@ private struct AgentSessionRow: View {
                         .foregroundStyle(stateColor)
                         .lineLimit(1)
                         .truncationMode(.middle)
-                        .frame(maxWidth: 170, alignment: .trailing)
+                        .frame(width: AgentRowMetrics.statusWidth(for: session), alignment: .leading)
                 } else {
                     Text(session.state.label)
                         .font(.system(size: 11, weight: .medium))

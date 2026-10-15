@@ -77,8 +77,10 @@ enum ReadmeImageRenderer {
         environment.agentEventManager.sessionTracker.previewLoad([
             AgentSession(id: "s1", source: "claude", project: "better-notch", pid: nil, state: .working,
                          stateSince: now.addingTimeInterval(-312), currentStep: "Editing StatusRingGlyph.swift", lastActivity: now),
-            AgentSession(id: "s2", source: "codex", project: "api-server", pid: nil, state: .needsApproval,
-                         stateSince: now.addingTimeInterval(-40), currentStep: "npm test", lastActivity: now),
+            AgentSession(id: "s2", source: "codex", project: "referenced-chatgpt-conversation", title: "Create heating prototype snapshot",
+                         pid: nil, state: .working, stateSince: now.addingTimeInterval(-40),
+                         currentStep: AgentSessionTracker.stepText(toolName: "exec_command", hint: "cmd:/Users/me/.venv/lib/python/bin/python3 snapshot.py"),
+                         lastActivity: now),
             AgentSession(id: "s3", source: "claude", project: "docs-site", pid: nil, state: .waiting,
                          stateSince: now.addingTimeInterval(-95), currentStep: nil, lastActivity: now),
             AgentSession(id: "s4", source: "claude", project: "infra", pid: nil, state: .done,
@@ -154,7 +156,9 @@ private struct OpenedIsland: View {
     let tab: ExtrasPanelModel.Tab
 
     var body: some View {
-        let width: CGFloat = 384
+        let width: CGFloat = tab == .agents
+            ? min(max(AgentRowMetrics.contentWidth(for: environment.agentEventManager.sessionTracker.sessions) + 32, 384), IslandLayout.maxOpenedWidth)
+            : 384
         let extras = ExtrasPanelView.height(
             tab: tab,
             sessions: environment.agentEventManager.sessionTracker.sessions.count,

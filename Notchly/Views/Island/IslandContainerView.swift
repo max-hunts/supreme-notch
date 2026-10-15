@@ -69,5 +69,10 @@ struct IslandContainerView<Content: View>: View {
     }
 
     /// The island window's width; wider than any island shape.
-    static var canvasWidth: CGFloat { 456 }
+    static var canvasWidth: CGFloat { IslandCanvas.width }
+}
+
+/// Shared with the window controller, which cannot name the generic view's static.
+enum IslandCanvas {
+    static let width: CGFloat = 536
 }

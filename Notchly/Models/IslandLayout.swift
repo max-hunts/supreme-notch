@@ -59,8 +59,11 @@ struct IslandLayout {
     /// The opened notch is wider than the closed one, so the extras tabs have room.
     /// Capped so it stays inside the 456 pt island window with its rounded corners.
     var openedWidth: CGFloat {
-        min(max(preferredOpenedWidth ?? baseWidth + 50, 340), 384)
+        min(max(preferredOpenedWidth ?? baseWidth + 50, 340), Self.maxOpenedWidth)
     }
+
+    /// The widest opened island that still fits the window with its rounded corners.
+    static let maxOpenedWidth: CGFloat = 464
 
     var openedSize: CGSize {
         CGSize(width: openedWidth, height: 132 + openedExtraHeight)

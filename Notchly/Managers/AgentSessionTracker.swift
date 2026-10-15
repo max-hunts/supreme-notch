@@ -51,6 +51,12 @@ nonisolated struct AgentSession: Identifiable, Equatable {
     var displayName: String {
         title ?? project ?? sourceLabel
     }
+
+    /// The right side of an Agents row: what it is doing while working, else its state.
+    var statusText: String {
+        if state == .working, let currentStep { return currentStep }
+        return state.label
+    }
 }
 
 @MainActor
@@ -216,7 +222,12 @@ final class AgentSessionTracker: ObservableObject {
             }
         }
         if let hint, hint.hasPrefix("cmd:") {
-            let command = String(hint.dropFirst(4)).trimmingCharacters(in: .whitespaces)
+            // "/Users/me/.venv/bin/python3 build.py" reads better as "python3 build.py".
+            let command = hint.dropFirst(4)
+                .split(separator: " ")
+                .map { word in word.contains("/") ? (word.split(separator: "/").last.map(String.init) ?? String(word)) : String(word) }
+                .joined(separator: " ")
+                .trimmingCharacters(in: .whitespaces)
             return command.isEmpty ? "Running a command" : "Running \(command)"
         }
         switch lower {
