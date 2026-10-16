@@ -14,6 +14,7 @@ extension ContentView {
         let containerSize: CGSize = {
             switch status {
             case .closed:
+                if agentClosedUsesBatteryWing { return batterySideWingSize }
                 return canUseCompactAgentClosedSize ? idleNotchSize : layout.closedSize
             case .agentCollapse:
                 return layout.agentCollapsedSize
@@ -23,6 +24,8 @@ extension ContentView {
                 return layout.agentPreviewSize
             }
         }()
+        // Matches the battery wing's off-center shape, so the swap between them is seamless.
+        let containerOffset = status == .closed && agentClosedUsesBatteryWing ? batterySideWingOffset : 0
 
         if event == nil {
             emptyBar
@@ -33,8 +36,10 @@ extension ContentView {
                 spacing: layout.spacing,
                 isHovered: isHovered
             )
+            .offset(x: containerOffset)
             .animation(.smooth(duration: 0.42, extraBounce: 0), value: containerSize.width)
             .animation(.smooth(duration: 0.42, extraBounce: 0), value: containerSize.height)
+            .animation(.smooth(duration: 0.42, extraBounce: 0), value: containerOffset)
             .animation(.smooth(duration: 0.42, extraBounce: 0), value: layout.cornerRadius)
         } else {
             AgentIslandFrame(
@@ -85,8 +90,10 @@ extension ContentView {
                     .transition(.opacity)
                 }
             }
+            .offset(x: containerOffset)
             .animation(animation, value: containerSize.width)
             .animation(animation, value: containerSize.height)
+            .animation(animation, value: containerOffset)
             .animation(animation, value: layout.cornerRadius)
         }
     }

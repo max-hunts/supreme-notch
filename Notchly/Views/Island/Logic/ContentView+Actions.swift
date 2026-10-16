@@ -387,6 +387,9 @@ extension ContentView {
     func performAgentPresentationDismissal() {
         agentDismissTask?.cancel()
         agentDismissTask = nil
+        // An alert that resolves within the expand delay must not expand afterwards.
+        agentPresentationTask?.cancel()
+        agentPresentationTask = nil
 
         if isAgentMusicTransitionActive {
             hideAgentMusicContent()
@@ -433,7 +436,7 @@ extension ContentView {
             guard !Task.isCancelled else { return }
 
             await MainActor.run {
-                guard activeAgentEvent != nil else { return }
+                guard agentEventManager.currentEvent != nil else { return }
                 guard status == .closed else { return }
 
                 withAnimation(.smooth(duration: expandDuration, extraBounce: 0)) {

@@ -248,6 +248,11 @@ struct ContentView: View {
             guard eventID > 0 else { return }
             handleVolumeEvent()
         }
+        .onChange(of: activeAgentEvent == nil) { _, isGone in
+            guard isGone, !isAgentMusicTransitionActive,
+                  status == .agentPreview || status == .agentCollapse else { return }
+            withAnimation(animation) { status = .closed }
+        }
         .onChange(of: agentEventManager.eventID) { _, eventID in
             guard eventID > 0 else { return }
             handleAgentEventChange(agentEventManager.currentEvent)

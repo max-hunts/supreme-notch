@@ -126,6 +126,13 @@ extension ContentView {
         (batterySideWingWidth - batteryLeftWingWidth) / 2
     }
 
+    /// An agent alert grows out of, and shrinks back into, the battery wing when that is
+    /// what the closed notch shows around it; otherwise the island would jump in width.
+    var agentClosedUsesBatteryWing: Bool {
+        settingsManager.showBattery && closedLiveActivity == nil && !showChargingPop
+            && !(settingsManager.showMusic && musicManager.hasNowPlayingContent)
+    }
+
     /// Shrink the closed island to the camera notch while the pointer is beside it.
     var tucksWings: Bool {
         status == .closed && wingsTuckedState && activeAgentEvent == nil && !showChargingPop
