@@ -52,7 +52,7 @@ extension ContentView {
                     if showsStandaloneAgentContent && (status == .agentPreview || isStandaloneAgentClosing) {
                         AgentActivityView(
                             event: event,
-                            size: layout.agentPreviewSize,
+                            size: agentActivitySize,
                             pendingCount: agentEventManager.pendingApprovals.count,
                             onDecision: { request, decision in
                                 agentEventManager.decide(request, decision)
@@ -62,7 +62,7 @@ extension ContentView {
                             }
                         )
                         .id(agentPresentationContentKey(for: event))
-                        .offset(y: AgentActivityView.contentTopOffset)
+                        .offset(y: AgentActivityView.contentTopOffset + layout.agentTopClearance)
                         .transition(
                             .asymmetric(
                                 insertion: .agentContentSlide(y: -14),
@@ -85,7 +85,7 @@ extension ContentView {
                     NoticeCloseButton {
                         agentEventManager.dismissCurrentEvent()
                     }
-                    .padding(.top, 12)
+                    .padding(.top, 12 + layout.agentTopClearance)
                     .padding(.trailing, layout.cornerRadius + 10)
                     .transition(.opacity)
                 }

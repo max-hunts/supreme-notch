@@ -31,6 +31,7 @@ extension ContentView {
             allowsCompactBaseWidth: musicStartUsesIdleWidth,
             idleWidthOverride: configuredIdleIslandWidth,
             agentContentHeight: AgentActivityView.contentHeight(for: activeAgentEvent),
+            agentTopClearance: agentTopClearance,
             openedExtraHeight: showsExtrasPanel ? extrasPanelHeight + ExtrasPanelView.gapBelowTopSection : 0,
             wingsTucked: tucksWings,
             liveActivityExtraWidth: liveActivityExtraWidth,
@@ -120,6 +121,19 @@ extension ContentView {
 
     var batterySideWingSize: CGSize {
         CGSize(width: layout.idleWidth + batterySideWingWidth + batteryLeftWingWidth, height: closedHeight)
+    }
+
+    var agentTopClearance: CGFloat {
+        AgentActivityView.notchClearance(
+            closedHeight: closedHeight,
+            screenHasNotch: (currentScreen?.safeAreaInsets.top ?? 0) > 0
+        )
+    }
+
+    /// The alert body's size: the island's alert size without the room above the header.
+    var agentActivitySize: CGSize {
+        let size = layout.agentPreviewSize
+        return CGSize(width: size.width, height: size.height - layout.agentTopClearance)
     }
 
     var batterySideWingOffset: CGFloat {

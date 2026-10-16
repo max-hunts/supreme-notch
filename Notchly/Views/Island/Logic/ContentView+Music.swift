@@ -33,7 +33,7 @@ extension ContentView {
                         if showsAgentActivity && showsAgentMusicContent {
                             AgentActivityView(
                                 event: agentEvent,
-                                size: layout.agentPreviewSize,
+                                size: agentActivitySize,
                                 pendingCount: agentEventManager.pendingApprovals.count,
                                 onDecision: { request, decision in
                                     agentEventManager.decide(request, decision)
@@ -43,7 +43,7 @@ extension ContentView {
                                 }
                             )
                             .id(agentPresentationContentKey(for: agentEvent))
-                            .offset(y: isAgentMusicClosing || agentMusicContentAppeared ? 10 : 4)
+                            .offset(y: (isAgentMusicClosing || agentMusicContentAppeared ? 10 : 4) + layout.agentTopClearance)
                             .animation(
                                 isAgentMusicClosing ? nil : .smooth(duration: 0.24, extraBounce: 0),
                                 value: agentMusicContentAppeared
@@ -289,7 +289,7 @@ extension ContentView {
                         }
                         Spacer()
                     }
-                    .padding(.top, 12)
+                    .padding(.top, 12 + layout.agentTopClearance)
                     .padding(.trailing, layout.cornerRadius + 10)
                     .transition(.opacity)
                 }

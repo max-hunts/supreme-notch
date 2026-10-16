@@ -18,6 +18,8 @@ struct IslandLayout {
     let idleWidthOverride: CGFloat?
     /// Taller agent island for approvals and summaries. Nil keeps the default preview height.
     var agentContentHeight: CGFloat? = nil
+    /// Extra room above an agent alert so its header starts below the camera housing.
+    var agentTopClearance: CGFloat = 0
     /// Extra height below the battery panel when the notch is opened (listening ports).
     var openedExtraHeight: CGFloat = 0
     /// The pointer is in the menu bar beside the island: shrink to the camera notch so
@@ -123,8 +125,10 @@ struct IslandLayout {
     }
 
     var agentPreviewSize: CGSize {
-        guard let agentContentHeight else { return musicPreviewSize }
-        return CGSize(width: baseWidth, height: agentContentHeight)
+        guard let agentContentHeight else {
+            return CGSize(width: musicPreviewSize.width, height: musicPreviewSize.height + agentTopClearance)
+        }
+        return CGSize(width: baseWidth, height: agentContentHeight + agentTopClearance)
     }
 
     var agentCollapsedSize: CGSize {

@@ -16,6 +16,14 @@ struct AgentActivityView: View {
 
     /// How far below the island's top edge the alert is drawn.
     static let contentTopOffset: CGFloat = 10
+    /// Where the header row starts, measured from the island's top edge.
+    static let headerTop: CGFloat = contentTopOffset + 4
+
+    /// Room to add above the alert so the header clears the camera housing, which covers
+    /// the top `closedHeight` points of the island on a screen with a notch.
+    static func notchClearance(closedHeight: CGFloat, screenHasNotch: Bool) -> CGFloat {
+        screenHasNotch ? max(0, closedHeight - headerTop) : 0
+    }
 
     /// Island content height for an event, or nil to use the default preview height.
     static func contentHeight(for event: AgentEvent?) -> CGFloat? {

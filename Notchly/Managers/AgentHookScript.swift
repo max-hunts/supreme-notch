@@ -77,7 +77,7 @@ enum AgentHookPaths {
 }
 
 enum AgentHookScript {
-    static let version = 4
+    static let version = 5
     static let versionMarker = "# betternotch-hook-version: \(version)"
 
     /// - Parameters:
@@ -111,6 +111,19 @@ emit() {
 
 notchly_running() { /usr/bin/pgrep -qx BetterNotch; }
 
+# Codex's "Approve for me" hands approvals to its own reviewer, which does not wait for
+# this hook. Only the reviewer setting is read from the thread log, never its messages.
+codex_auto_review() {
+  [ "$source_name" = "codex" ] || return 1
+  transcript=$(field transcript_path)
+  [ -n "$transcript" ] && [ -f "$transcript" ] || return 1
+  reviewer=$(/usr/bin/grep -o '"approvals_reviewer":"[a-z_]*"' "$transcript" 2>/dev/null | /usr/bin/tail -n 1)
+  case "$reviewer" in
+    *'"user"'*|'') return 1 ;;
+    *) return 0 ;;
+  esac
+}
+
 payload=$(cat)
 sid=$(clean "$(field session_id)")
 tool=$(clean "$(field tool_name)")
@@ -143,6 +156,9 @@ fi
 
 case "$event_type" in
   approval|permission_request)
+    if codex_auto_review; then
+      exit 0
+    fi
     wait_seconds=$(tr -cd '0-9' < "$base/approval-wait-seconds" 2>/dev/null)
     wait_seconds=${wait_seconds:-0}
     if [ "$wait_seconds" -le 0 ] || ! notchly_running; then
