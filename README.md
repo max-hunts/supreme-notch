@@ -38,7 +38,7 @@ Charging color changes the moment you plug in or unplug.
   <img src="docs/images/usage-colors.png" width="460" alt="Usage color scales for Claude and Codex">
 </p>
 
-Claude's bars run cold to hot, from blue through white to red. Codex's run green to red. Any bar at its limit turns purple.
+Claude's bars run cold to hot, from blue through cyan, green and amber to red. Codex's run green to red. Any bar at its limit turns purple.
 
 ## Opened notch
 

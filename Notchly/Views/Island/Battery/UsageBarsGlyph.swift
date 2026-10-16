@@ -3,8 +3,8 @@
 //  Notchly
 //
 //  Compact subscription usage for the closed notch: one short vertical bar per limit,
-//  filling bottom to top. Claude's bars run cold to hot (blue to red), Codex's run
-//  green to red, and any bar at its limit turns purple.
+//  filling bottom to top. Claude's bars run cold to hot (blue through green to red),
+//  Codex's run green to red, and any bar at its limit turns purple.
 //
 
 import SwiftUI
@@ -55,15 +55,14 @@ struct UsageBarsGlyph: View {
 
     private typealias Stop = (at: Double, red: Double, green: Double, blue: Double)
 
-    /// Cold to hot through white, so it never passes green like the Codex scale:
-    /// blue, light blue, white, amber, orange, red.
+    /// Cold to hot through green: blue, cyan, sea green, lime, amber, red.
     private static let claudeStops: [Stop] = [
-        (0.00, 0.28, 0.52, 1.00),
-        (0.30, 0.55, 0.76, 1.00),
-        (0.50, 0.90, 0.91, 0.95),
-        (0.70, 1.00, 0.76, 0.32),
-        (0.85, 1.00, 0.52, 0.22),
-        (0.99, 1.00, 0.27, 0.25)
+        (0.00, 0.184, 0.357, 1.000),
+        (0.22, 0.122, 0.714, 0.949),
+        (0.42, 0.133, 0.827, 0.651),
+        (0.60, 0.651, 0.890, 0.235),
+        (0.78, 1.000, 0.690, 0.125),
+        (0.99, 0.910, 0.149, 0.227)
     ]
 
     /// Green, yellow, orange, red.
@@ -88,10 +87,33 @@ struct UsageBarsGlyph: View {
         }
         let low = stops[upper - 1], high = stops[upper]
         let t = (clamped - low.at) / (high.at - low.at)
-        return Color(
-            red: low.red + (high.red - low.red) * t,
-            green: low.green + (high.green - low.green) * t,
-            blue: low.blue + (high.blue - low.blue) * t
-        )
+        // Blend in OKLab so the in-between colors stay as vivid as the stops.
+        let a = oklab(low.red, low.green, low.blue), b = oklab(high.red, high.green, high.blue)
+        let mixed = srgb(L: a.L + (b.L - a.L) * t, a: a.a + (b.a - a.a) * t, b: a.b + (b.b - a.b) * t)
+        return Color(red: mixed.red, green: mixed.green, blue: mixed.blue)
+    }
+
+    private static func oklab(_ r: Double, _ g: Double, _ b: Double) -> (L: Double, a: Double, b: Double) {
+        func linear(_ c: Double) -> Double { c <= 0.04045 ? c / 12.92 : pow((c + 0.055) / 1.055, 2.4) }
+        let (r, g, b) = (linear(r), linear(g), linear(b))
+        let l = cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+        let m = cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+        let s = cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+        return (0.2104542553 * l + 0.7936177850 * m - 0.0040720468 * s,
+                1.9779984951 * l - 2.4285922050 * m + 0.4505937099 * s,
+                0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s)
+    }
+
+    private static func srgb(L: Double, a: Double, b: Double) -> (red: Double, green: Double, blue: Double) {
+        func gamma(_ c: Double) -> Double {
+            let c = min(max(c, 0), 1)
+            return c <= 0.0031308 ? 12.92 * c : 1.055 * pow(c, 1 / 2.4) - 0.055
+        }
+        let l = pow(L + 0.3963377774 * a + 0.2158037573 * b, 3)
+        let m = pow(L - 0.1055613458 * a - 0.0638541728 * b, 3)
+        let s = pow(L - 0.0894841775 * a - 1.2914855480 * b, 3)
+        return (gamma(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+                gamma(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+                gamma(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s))
     }
 }
