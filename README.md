@@ -25,7 +25,7 @@ BetterNotch is a fork of [Notchly](https://github.com/Notchly/Notchly) (MIT), re
 The closed notch stays out of the way. The camera sits in the middle, with a small wing on each side:
 
 - **Right wing, the status ring.** One glyph shows three things. The outer arc is your battery level. The center shows your network: Wi-Fi bars, an Ethernet plug, or offline. The four dots along the bottom show output volume.
-- **Left wing, usage bars.** One short bar for each subscription limit: Claude's 5-hour, weekly and per-model limits, plus Codex. They refresh every 5 minutes.
+- **Left wing, usage bars.** One short bar for each subscription limit: Claude's 5-hour, weekly and per-model limits, plus Codex. The colored part is what's left, so a fresh limit is a full bar, and it shrinks and warms in color as you use it. They refresh every 5 minutes. **Settings → AI Usage** switches between two bar styles.
 - **Muted mic.** A red slashed mic appears next to the camera whenever your microphone is muted.
 
 <p align="center">
@@ -38,7 +38,7 @@ Charging color changes the moment you plug in or unplug.
   <img src="docs/images/usage-colors.png" width="460" alt="Usage color scales for Claude and Codex">
 </p>
 
-Claude's bars run cold to hot, from blue through cyan, green and amber to red. Codex's run green to red. Any bar at its limit turns purple.
+Colors follow how much is used. Claude's run cold to hot, from blue through cyan, green and amber to red. Codex's run green to red. Any bar at its limit is solid purple.
 
 ## Opened notch
 

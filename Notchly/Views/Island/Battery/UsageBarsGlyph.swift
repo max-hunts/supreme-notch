@@ -2,9 +2,10 @@
 //  UsageBarsGlyph.swift
 //  Notchly
 //
-//  Compact subscription usage for the closed notch: one short vertical bar per limit,
-//  filling bottom to top. Claude's bars run cold to hot (blue through green to red),
-//  Codex's run green to red, and any bar at its limit turns purple.
+//  Compact subscription usage for the closed notch: one short vertical bar per limit.
+//  The colored part is what is left, and the dim part below it what is used, so a fresh
+//  limit is a full colored bar. Claude's colors run cold to hot (blue through green to
+//  red) as usage grows, Codex's run green to red, and a bar at its limit is solid purple.
 //
 
 import SwiftUI
@@ -18,9 +19,37 @@ struct UsageBar: Equatable, Identifiable {
     let scale: Scale
 }
 
+/// Which part of a closed-notch usage bar is drawn as its own capsule.
+enum UsageBarStyle: String, CaseIterable, Identifiable {
+    /// What is left is a colored capsule hanging from the top over the dim track.
+    case colorHangs
+    /// What is used is a dim capsule rising from the bottom into the color.
+    case grayRises
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .colorHangs: return "Color hangs"
+        case .grayRises: return "Gray rises"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .colorHangs: return "Color is the capsule"
+        case .grayRises: return "Gray is the capsule"
+        }
+    }
+}
+
 struct UsageBarsGlyph: View {
     let bars: [UsageBar]
     let height: CGFloat
+    var style: UsageBarStyle = .colorHangs
+
+    /// The used part and the empty track: opaque, so it reads the same over the color.
+    static let dimColor = Color(white: 0.16)
 
     static let barWidth: CGFloat = 4
     static let barSpacing: CGFloat = 3
@@ -33,22 +62,46 @@ struct UsageBarsGlyph: View {
     var body: some View {
         HStack(alignment: .bottom, spacing: Self.barSpacing) {
             ForEach(bars) { bar in
-                let fraction = CGFloat(min(max(bar.percent / 100, 0), 1))
-                ZStack(alignment: .bottom) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.16))
-                    Capsule()
-                        .fill(Self.color(for: bar))
-                        // Keep a round dot visible even at 0%.
-                        .frame(height: max(Self.barWidth, height * fraction))
-                }
-                .frame(width: Self.barWidth, height: height)
-                .animation(.easeOut(duration: 0.4), value: bar.percent)
+                barView(bar)
+                    .frame(width: Self.barWidth, height: height)
+                    .clipShape(Capsule())
+                    .animation(.easeOut(duration: 0.4), value: bar.percent)
             }
         }
         .frame(width: Self.width(barCount: bars.count), height: height)
         .accessibilityElement()
         .accessibilityLabel(bars.map { "\($0.id) \(Int($0.percent.rounded()))%" }.joined(separator: ", "))
+    }
+
+    @ViewBuilder
+    private func barView(_ bar: UsageBar) -> some View {
+        let used = CGFloat(min(max(bar.percent / 100, 0), 1))
+        let color = Self.color(for: bar)
+        if used >= 1 {
+            Capsule().fill(color)
+        } else {
+            switch style {
+            case .colorHangs:
+                ZStack(alignment: .top) {
+                    Capsule().fill(Self.dimColor)
+                    Capsule()
+                        .fill(color)
+                        // Keep a round dot of color visible just short of the limit.
+                        .frame(height: max(Self.barWidth, height * (1 - used)))
+                }
+            case .grayRises:
+                ZStack(alignment: .bottom) {
+                    Capsule().fill(color)
+                    if used > 0 {
+                        Capsule()
+                            .fill(Self.dimColor)
+                            // At least a dot once anything is used, and never covering the
+                            // last dot of color.
+                            .frame(height: min(max(Self.barWidth, height * used), height - Self.barWidth))
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Color scales

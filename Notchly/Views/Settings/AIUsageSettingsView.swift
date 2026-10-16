@@ -2,8 +2,9 @@
 //  AIUsageSettingsView.swift
 //  Notchly
 //
-//  The AI Usage settings page: the Usage tab switch, the keys used to read Claude and
-//  Codex plan limits, and which copy of claude-usage-monitor is in use.
+//  The AI Usage settings page: the Usage tab switch, how the closed notch's usage bars
+//  look, the keys used to read Claude and Codex plan limits, and which copy of
+//  claude-usage-monitor is in use.
 //
 
 import SwiftUI
@@ -20,6 +21,14 @@ struct AIUsageSettingsView: View {
                         subtitle: "Shows Claude 5-hour, weekly and per-model limits, and Codex weekly usage, in the opened notch.",
                         isOn: $settingsManager.showUsageTab
                     )
+
+                    SettingsDivider()
+
+                    UsageBarStylePicker(selection: $settingsManager.usageBarStyle)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .disabled(!settingsManager.showUsageTab)
+                        .opacity(settingsManager.showUsageTab ? 1 : 0.45)
 
                     SettingsDivider()
 
@@ -56,4 +65,88 @@ struct AIUsageSettingsView: View {
         }
         return "Using the installed copy at \(url.path)."
     }
+}
+
+/// Chooses how the closed notch's usage bars are drawn, with a live preview of each.
+private struct UsageBarStylePicker: View {
+    @Binding var selection: UsageBarStyle
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Usage Bars")
+                    .font(.system(size: 13, weight: .medium))
+                Text("The colored part of each bar beside the camera is what's left. A bar at its limit turns purple.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 10) {
+                ForEach(UsageBarStyle.allCases) { style in
+                    option(style)
+                }
+            }
+        }
+    }
+
+    private func option(_ style: UsageBarStyle) -> some View {
+        let isSelected = selection == style
+        return Button {
+            withAnimation(.easeInOut(duration: 0.16)) { selection = style }
+        } label: {
+            HStack(spacing: 10) {
+                UsageBarsGlyph(bars: Self.sample, height: 26, style: style)
+                    .frame(width: 46, height: 42)
+                    .background(Color.black, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .stroke(isSelected ? Color.accentColor.opacity(0.62) : Color.white.opacity(0.08), lineWidth: 1)
+                    }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(style.title)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary)
+                    Text(style.subtitle)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                Spacer(minLength: 0)
+
+                if isSelected {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white, Color.accentColor)
+                }
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 58)
+            .frame(maxWidth: .infinity)
+            .background(isSelected ? Color.accentColor.opacity(0.18) : Color.black.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.5) : Color.white.opacity(0.08), lineWidth: 1)
+            }
+            .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        }
+        .buttonStyle(SubtleHoverButtonStyle(
+            pressedScale: 0.97,
+            hoverScale: 1.012,
+            hoverBackgroundOpacity: 0.06,
+            cornerRadius: 10
+        ))
+        .accessibilityLabel(style.title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    /// Three Claude limits at different levels and Codex at its limit.
+    private static let sample = [
+        UsageBar(id: "5 hours", percent: 15, scale: .claude),
+        UsageBar(id: "Week", percent: 55, scale: .claude),
+        UsageBar(id: "Model", percent: 85, scale: .claude),
+        UsageBar(id: "Codex", percent: 100, scale: .codex)
+    ]
 }

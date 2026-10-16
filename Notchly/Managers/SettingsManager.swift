@@ -101,6 +101,7 @@ final class SettingsManager: ObservableObject {
         static let showAgentSessions = true
         static let showMeetingCountdown = true
         static let showUsageTab = true
+        static let usageBarStyle = UsageBarStyle.colorHangs
         static let showSystemTab = true
         static let showFileShelf = true
         static let showMicMute = true
@@ -310,6 +311,10 @@ final class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(showUsageTab, forKey: "showUsageTab") }
     }
 
+    @Published var usageBarStyle: UsageBarStyle {
+        didSet { UserDefaults.standard.set(usageBarStyle.rawValue, forKey: "usageBarStyle") }
+    }
+
     @Published var showSystemTab: Bool {
         didSet { UserDefaults.standard.set(showSystemTab, forKey: "showSystemTab") }
     }
@@ -387,6 +392,8 @@ final class SettingsManager: ObservableObject {
         self.showAgentSessions = UserDefaults.standard.object(forKey: "showAgentSessions") as? Bool ?? Defaults.showAgentSessions
         self.showMeetingCountdown = UserDefaults.standard.object(forKey: "showMeetingCountdown") as? Bool ?? Defaults.showMeetingCountdown
         self.showUsageTab = UserDefaults.standard.object(forKey: "showUsageTab") as? Bool ?? Defaults.showUsageTab
+        self.usageBarStyle = UserDefaults.standard.string(forKey: "usageBarStyle").flatMap(UsageBarStyle.init(rawValue:))
+            ?? Defaults.usageBarStyle
         self.showSystemTab = UserDefaults.standard.object(forKey: "showSystemTab") as? Bool ?? Defaults.showSystemTab
         self.showFileShelf = UserDefaults.standard.object(forKey: "showFileShelf") as? Bool ?? Defaults.showFileShelf
         self.showMicMute = UserDefaults.standard.object(forKey: "showMicMute") as? Bool ?? Defaults.showMicMute

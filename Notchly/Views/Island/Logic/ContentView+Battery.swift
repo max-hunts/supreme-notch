@@ -57,7 +57,8 @@ extension ContentView {
                     horizontalOffset: leftOnly ? batterySideWingOffset : 0,
                     hoverOffsetY: hoverOffsetY,
                     micMuted: closedMicMuted,
-                    usageBars: closedUsageBars
+                    usageBars: closedUsageBars,
+                    usageBarStyle: settingsManager.usageBarStyle
                 )
                 .opacity(tucksWings ? 0 : 1)
                 .scaleEffect(x: tucksWings ? 0.6 : 1, y: tucksWings ? 0.85 : 1, anchor: .center)

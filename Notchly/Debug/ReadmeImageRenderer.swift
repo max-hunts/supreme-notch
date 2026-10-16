@@ -37,6 +37,11 @@ enum ReadmeImageRenderer {
         save(Backdrop { OpenedIsland(environment: environment, tab: .agents) }, as: "check-row-highlights.png", in: directory)
         SnapshotRendering.showsRowHighlights = false
 
+        // Settings check: the usage bar style picker, not used in the README.
+        save(AIUsageSettingsView(settingsManager: environment.settingsManager)
+                .frame(width: 560).padding(20).background(Color(white: 0.16)).environment(\.colorScheme, .dark),
+             as: "check-usage-settings.png", in: directory)
+
         let now = Date()
         let approval = AgentApprovalRequest(
             id: "sample", source: "claude", sessionID: "s1", toolName: "Bash",

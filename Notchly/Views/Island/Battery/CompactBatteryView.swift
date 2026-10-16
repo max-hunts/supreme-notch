@@ -22,6 +22,7 @@ struct CompactBatteryView: View {
     let hoverOffsetY: CGFloat
     var micMuted = false
     var usageBars: [UsageBar] = []
+    var usageBarStyle: UsageBarStyle = .colorHangs
 
     static let verticalInset: CGFloat = 2.5
     /// Space between a glyph and the camera notch.
@@ -70,7 +71,8 @@ struct CompactBatteryView: View {
                     if !usageBars.isEmpty {
                         UsageBarsGlyph(
                             bars: usageBars,
-                            height: Self.barsHeight(closedHeight: size.height)
+                            height: Self.barsHeight(closedHeight: size.height),
+                            style: usageBarStyle
                         )
                     }
                     if micMuted {
