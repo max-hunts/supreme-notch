@@ -17,15 +17,16 @@ enum IslandMetrics {
     static let contentInset: CGFloat = 16
     /// Corner radius of an alert dropping out of the notch.
     static let noticeRadius: CGFloat = 24
-    /// Corner radius of the opened notch.
-    static let openedRadius: CGFloat = 32
+    /// Corner radius of the opened notch: a row's 12 pt rounded end plus its 10 pt margin,
+    /// so a hovered row's corners run parallel to the notch's.
+    static let openedRadius: CGFloat = 22
     static let buttonHeight: CGFloat = 30
 
     /// Clickable rows in the opened panels, and their pill-shaped hover highlight.
     static let rowHeight: CGFloat = 24
     static var rowRadius: CGFloat { rowHeight / 2 }
     /// Island edge to a row highlight. Corners run parallel when the inner radius plus
-    /// this gap equals the outer radius: 32 - 12 = 20.
+    /// this gap equals the outer radius: 22 - 12 = 10.
     static var rowEdgeInset: CGFloat { openedRadius - rowRadius }
     /// Highlight edge to the row's icon and text.
     static let rowContentPadding: CGFloat = 8

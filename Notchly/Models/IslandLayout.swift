@@ -178,7 +178,7 @@ struct IslandLayout {
         case .closed:
             return 8
         case .opened:
-            return 32
+            return IslandMetrics.openedRadius
         case .popping:
             return 10
         case .musicPreview:
