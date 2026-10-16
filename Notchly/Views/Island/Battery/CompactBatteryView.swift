@@ -24,37 +24,53 @@ struct CompactBatteryView: View {
     var usageBars: [UsageBar] = []
 
     static let verticalInset: CGFloat = 2.5
+    /// Space between a glyph and the camera notch.
     static let horizontalInset: CGFloat = 11
     static let micIconWidth: CGFloat = 14
     static let leftWingSpacing: CGFloat = 8
 
     /// The wing left of the camera for the usage bars and muted mic; 0 when both are off.
-    static func leftWingWidth(barCount: Int, micMuted: Bool) -> CGFloat {
+    static func leftWingWidth(barCount: Int, micMuted: Bool, closedHeight: CGFloat) -> CGFloat {
         guard barCount > 0 || micMuted else { return 0 }
         let bars = UsageBarsGlyph.width(barCount: barCount)
         let mic = micMuted ? micIconWidth : 0
         let gap = barCount > 0 && micMuted ? leftWingSpacing : 0
-        return horizontalInset * 2 + bars + gap + mic
+        return horizontalInset + bars + gap + mic + barsOuterInset(closedHeight: closedHeight)
     }
 
     static func glyphHeight(closedHeight: CGFloat) -> CGFloat {
         (closedHeight - verticalInset * 2) * 0.95
     }
 
+    static func barsHeight(closedHeight: CGFloat) -> CGFloat {
+        glyphHeight(closedHeight: closedHeight) - 3
+    }
+
+    /// The ring sits as far from the island's right edge as from its bottom edge.
+    static func ringOuterInset(closedHeight: CGFloat) -> CGFloat {
+        (closedHeight - glyphHeight(closedHeight: closedHeight)) / 2
+    }
+
+    /// The bars sit as far from the island's left edge as from its bottom edge.
+    static func barsOuterInset(closedHeight: CGFloat) -> CGFloat {
+        (closedHeight - barsHeight(closedHeight: closedHeight)) / 2
+    }
+
     /// The wing right of the notch that holds the glyph.
     static func wingWidth(closedHeight: CGFloat) -> CGFloat {
-        horizontalInset * 2 + StatusRingGlyph.width(forHeight: glyphHeight(closedHeight: closedHeight))
+        horizontalInset + StatusRingGlyph.width(forHeight: glyphHeight(closedHeight: closedHeight))
+            + ringOuterInset(closedHeight: closedHeight)
     }
 
     var body: some View {
-        let leftWing = Self.leftWingWidth(barCount: usageBars.count, micMuted: micMuted)
+        let leftWing = Self.leftWingWidth(barCount: usageBars.count, micMuted: micMuted, closedHeight: size.height)
         HStack(spacing: 0) {
             if leftWing > 0 {
                 HStack(spacing: Self.leftWingSpacing) {
                     if !usageBars.isEmpty {
                         UsageBarsGlyph(
                             bars: usageBars,
-                            height: Self.glyphHeight(closedHeight: size.height) - 3
+                            height: Self.barsHeight(closedHeight: size.height)
                         )
                     }
                     if micMuted {
@@ -63,7 +79,8 @@ struct CompactBatteryView: View {
                             .transition(.opacity.combined(with: .scale(scale: 0.6)))
                     }
                 }
-                .frame(width: leftWing)
+                .padding(.leading, Self.barsOuterInset(closedHeight: size.height))
+                .frame(width: leftWing, alignment: .leading)
                 .transition(.opacity)
             }
 
@@ -79,7 +96,7 @@ struct CompactBatteryView: View {
                 height: Self.glyphHeight(closedHeight: size.height)
             )
         }
-        .padding(.trailing, Self.horizontalInset)
+        .padding(.trailing, Self.ringOuterInset(closedHeight: size.height))
         .frame(width: size.width, height: size.height)
         .offset(x: horizontalOffset, y: hoverOffsetY)
         .animation(.smooth(duration: 0.25, extraBounce: 0), value: micMuted)

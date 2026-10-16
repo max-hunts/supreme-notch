@@ -115,7 +115,7 @@ extension ContentView {
 
     /// The wing left of the camera, for the usage bars and the muted mic.
     var batteryLeftWingWidth: CGFloat {
-        CompactBatteryView.leftWingWidth(barCount: closedUsageBars.count, micMuted: closedMicMuted)
+        CompactBatteryView.leftWingWidth(barCount: closedUsageBars.count, micMuted: closedMicMuted, closedHeight: closedHeight)
     }
 
     var batterySideWingSize: CGSize {

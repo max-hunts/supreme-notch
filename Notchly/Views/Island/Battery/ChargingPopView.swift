@@ -42,7 +42,7 @@ struct ChargingPopView: View {
                     height: CompactBatteryView.glyphHeight(closedHeight: size.height)
                 )
             }
-            .padding(.trailing, CompactBatteryView.horizontalInset)
+            .padding(.trailing, CompactBatteryView.ringOuterInset(closedHeight: size.height))
             .frame(width: wing)
         }
         .frame(width: size.width, height: size.height)
