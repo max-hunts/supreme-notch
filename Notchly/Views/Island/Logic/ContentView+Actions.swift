@@ -189,6 +189,14 @@ extension ContentView {
 
             lockIslandTransitionTask = nil
             playPendingNetworkEventIfReady()
+
+            // The lock screen closed the island over any alert on screen. Show it again,
+            // or drop a stale one, so the island never sits in an empty alert state.
+            if agentEventManager.currentEvent != nil {
+                agentEventManager.representAfterUnlock()
+            } else if displayedAgentEvent != nil {
+                performAgentPresentationDismissal()
+            }
         }
     }
 

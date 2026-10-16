@@ -732,6 +732,27 @@ final class AgentEventManager: ObservableObject {
         }
     }
 
+    /// After the lock screen, shows the current alert again with a fresh timer. An alert
+    /// that arrived while locked was never really seen, the lock screen closed the island
+    /// over it, and its timer may have run out of step while the Mac slept.
+    func representAfterUnlock() {
+        guard let currentEvent else { return }
+        if shouldAutoClear(currentEvent) {
+            clearTask?.cancel()
+            let id = currentEvent.id
+            let ttl = currentEvent.ttl
+            clearTask = Task { [weak self] in
+                try? await Task.sleep(for: .seconds(ttl))
+                guard !Task.isCancelled else { return }
+                await MainActor.run {
+                    guard self?.currentEvent?.id == id else { return }
+                    self?.restoreParkedOrClear()
+                }
+            }
+        }
+        eventID += 1
+    }
+
     private func clearCurrentEvent(for source: String) {
         let normalizedSource = source.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard let currentEvent,
