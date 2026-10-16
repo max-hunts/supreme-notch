@@ -158,6 +158,9 @@ struct ContentView: View {
         .onChange(of: wingWatcherWidth) { _, width in
             wingWatcher.configure(screen: currentScreen, islandWidth: width)
         }
+        .onChange(of: isPointerInsideIsland || status == .opened, initial: true) { _, inUse in
+            InteractionActivity.shared.setActive(inUse)
+        }
         .onChange(of: settingsManager.showUsageTab, initial: true) { _, enabled in
             if enabled { aiUsageMonitor.startBackground() } else { aiUsageMonitor.stopBackground() }
         }
