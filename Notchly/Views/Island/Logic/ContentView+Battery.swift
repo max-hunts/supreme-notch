@@ -121,7 +121,7 @@ extension ContentView {
                             }
                         }
                     )
-                        .offset(y: 20 + layout.batteryPanelSize.height - 12)
+                        .offset(y: layout.batteryPanelSize.height + ExtrasPanelView.gapBelowTopSection)
                         .transition(ExtrasPanelView.transition)
                         .zIndex(4)
                 }

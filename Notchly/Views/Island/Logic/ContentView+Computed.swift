@@ -31,7 +31,7 @@ extension ContentView {
             allowsCompactBaseWidth: musicStartUsesIdleWidth,
             idleWidthOverride: configuredIdleIslandWidth,
             agentContentHeight: AgentActivityView.contentHeight(for: activeAgentEvent),
-            openedExtraHeight: showsExtrasPanel ? extrasPanelHeight : 0,
+            openedExtraHeight: showsExtrasPanel ? extrasPanelHeight + ExtrasPanelView.gapBelowTopSection : 0,
             wingsTucked: tucksWings,
             liveActivityExtraWidth: liveActivityExtraWidth,
             batteryWingWidth: batterySideWingWidth,

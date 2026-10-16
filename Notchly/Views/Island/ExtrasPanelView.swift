@@ -189,6 +189,9 @@ struct ExtrasPanelView: View {
     @State private var swipeConsumed = false
 
     static let headerHeight: CGFloat = 26
+    /// The panel starts this far below the top section (battery or music) above it.
+    /// The island's height counts it, or the panel's bottom margin would be cut short.
+    static let gapBelowTopSection: CGFloat = 8
     /// Extra room between the tab row and a tab's content. Only the System rings use it.
     static func contentGap(for tab: ExtrasPanelModel.Tab?) -> CGFloat {
         tab == .system ? 10 : 0

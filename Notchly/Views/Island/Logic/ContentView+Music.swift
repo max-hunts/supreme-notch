@@ -232,7 +232,7 @@ extension ContentView {
                             }
                         }
                     )
-                        .offset(y: 20 + layout.musicPlayerSize.height - 12)
+                        .offset(y: layout.musicPlayerSize.height + ExtrasPanelView.gapBelowTopSection)
                         .transition(ExtrasPanelView.transition)
                         .zIndex(4)
                 }
