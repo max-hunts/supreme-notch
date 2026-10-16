@@ -80,24 +80,35 @@ struct UsageBarsGlyph: View {
         if used >= 1 {
             Capsule().fill(color)
         } else {
+            // Each part is drawn only where it shows. The flat part stops where the rounded
+            // part's curve begins, so the two overlap only along that curve and neither shows
+            // through the other's soft outer edges.
+            let radius = Self.barWidth / 2
             switch style {
             case .colorHangs:
+                // Keep a round dot of color visible just short of the limit.
+                let colorHeight = max(Self.barWidth, height * (1 - used))
                 ZStack(alignment: .top) {
-                    Capsule().fill(Self.dimColor)
+                    if used > 0 {
+                        Self.dimColor
+                            .frame(height: height - colorHeight + radius)
+                            .frame(maxHeight: .infinity, alignment: .bottom)
+                    }
                     Capsule()
                         .fill(color)
-                        // Keep a round dot of color visible just short of the limit.
-                        .frame(height: max(Self.barWidth, height * (1 - used)))
+                        .frame(height: colorHeight)
                 }
             case .grayRises:
+                // At least a dot once anything is used, and never covering the last dot of color.
+                let grayHeight = used > 0 ? min(max(Self.barWidth, height * used), height - Self.barWidth) : 0
                 ZStack(alignment: .bottom) {
-                    Capsule().fill(color)
-                    if used > 0 {
+                    color
+                        .frame(height: grayHeight > 0 ? height - grayHeight + radius : height)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                    if grayHeight > 0 {
                         Capsule()
                             .fill(Self.dimColor)
-                            // At least a dot once anything is used, and never covering the
-                            // last dot of color.
-                            .frame(height: min(max(Self.barWidth, height * used), height - Self.barWidth))
+                            .frame(height: grayHeight)
                     }
                 }
             }
