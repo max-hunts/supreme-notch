@@ -59,6 +59,46 @@ final class ExtrasPanelModel: ObservableObject {
         noteText = UserDefaults.standard.string(forKey: "quickNoteText") ?? ""
     }
 
+    private var swipeTravel: CGFloat = 0
+    private var swipeConsumed = false
+
+    /// Two-finger sideways swipe anywhere on the opened notch moves exactly one tab per
+    /// gesture. Momentum after the
+    /// fingers lift is ignored, which is what made hard swipes jump two tabs.
+    func handleSwipe(_ event: NSEvent, tabs: [Tab], selected: Tab?) {
+        guard event.momentumPhase.isEmpty else { return }
+
+        if event.phase.contains(.began) || event.phase.contains(.mayBegin) {
+            swipeTravel = 0
+            swipeConsumed = false
+        }
+        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
+            swipeTravel = 0
+            swipeConsumed = false
+            return
+        }
+        // Mouse wheels have no phases; treat each sideways tick as its own gesture.
+        let isWheel = event.phase.isEmpty
+        guard !swipeConsumed || isWheel else { return }
+
+        let deltaX = event.scrollingDeltaX
+        let deltaY = event.scrollingDeltaY
+        guard abs(deltaX) > abs(deltaY) else { return }
+
+        swipeTravel += deltaX
+        guard abs(swipeTravel) >= (isWheel ? 1 : 24),
+              let selected, let index = tabs.firstIndex(of: selected) else { return }
+
+        // Fingers moving left bring in the tab on the right, like swiping between pages.
+        let next = swipeTravel < 0 ? index + 1 : index - 1
+        swipeTravel = 0
+        swipeConsumed = true
+        guard tabs.indices.contains(next) else { return }
+        withAnimation(.smooth(duration: 0.22, extraBounce: 0)) {
+            choose(tabs[next])
+        }
+    }
+
     func choose(_ tab: Tab) {
         chosenTab = tab
         UserDefaults.standard.set(tab.rawValue, forKey: "extrasPanelTab")
@@ -184,9 +224,7 @@ struct ExtrasPanelView: View {
     static let meetingStripHeight: CGFloat = 30
 
     /// Sideways trackpad travel so far in the current swipe.
-    @State private var swipeTravel: CGFloat = 0
     /// Set once a swipe has changed tab; cleared when the fingers lift.
-    @State private var swipeConsumed = false
 
     static let headerHeight: CGFloat = 26
     /// The panel starts this far below the top section (battery or music) above it.
@@ -302,49 +340,7 @@ struct ExtrasPanelView: View {
         }
         .padding(.horizontal, IslandMetrics.contentInset)
         .frame(width: width, alignment: .topLeading)
-        .background {
-            if !SnapshotRendering.isActive {
-                ScrollSwipeCatcher(onScrollEvent: { event in
-                    handleSwipe(event, tabs: tabs, selected: selected)
-                })
-            }
-        }
-    }
 
-    /// Two-finger sideways swipe moves exactly one tab per gesture. Momentum after the
-    /// fingers lift is ignored, which is what made hard swipes jump two tabs.
-    private func handleSwipe(_ event: NSEvent, tabs: [ExtrasPanelModel.Tab], selected: ExtrasPanelModel.Tab?) {
-        guard event.momentumPhase.isEmpty else { return }
-
-        if event.phase.contains(.began) || event.phase.contains(.mayBegin) {
-            swipeTravel = 0
-            swipeConsumed = false
-        }
-        if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
-            swipeTravel = 0
-            swipeConsumed = false
-            return
-        }
-        // Mouse wheels have no phases; treat each sideways tick as its own gesture.
-        let isWheel = event.phase.isEmpty
-        guard !swipeConsumed || isWheel else { return }
-
-        let deltaX = event.scrollingDeltaX
-        let deltaY = event.scrollingDeltaY
-        guard abs(deltaX) > abs(deltaY) else { return }
-
-        swipeTravel += deltaX
-        guard abs(swipeTravel) >= (isWheel ? 1 : 24),
-              let selected, let index = tabs.firstIndex(of: selected) else { return }
-
-        // Fingers moving left bring in the tab on the right, like swiping between pages.
-        let next = swipeTravel < 0 ? index + 1 : index - 1
-        swipeTravel = 0
-        swipeConsumed = true
-        guard tabs.indices.contains(next) else { return }
-        withAnimation(.smooth(duration: 0.22, extraBounce: 0)) {
-            model.choose(tabs[next])
-        }
     }
 
     private func count(for tab: ExtrasPanelModel.Tab) -> Int? {

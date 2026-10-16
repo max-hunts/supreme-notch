@@ -149,6 +149,23 @@ extension ContentView {
         }
     }
 
+    /// Catches sideways swipes anywhere on the opened notch, not just over the tabs, and
+    /// sits behind everything so buttons and sliders keep their own input.
+    @ViewBuilder
+    var openedSwipeCatcher: some View {
+        if status == .opened, showsExtrasPanel, !SnapshotRendering.isActive {
+            ScrollSwipeCatcher(onScrollEvent: { event in
+                extrasPanelModel.handleSwipe(
+                    event,
+                    tabs: extrasPanelModel.availableTabs(settingsManager),
+                    selected: selectedExtrasTab
+                )
+            })
+            .frame(width: layout.islandSize.width, height: layout.islandSize.height)
+            .zIndex(0)
+        }
+    }
+
     var selectedExtrasTab: ExtrasPanelModel.Tab? {
         extrasPanelModel.resolvedTab(
             available: extrasPanelModel.availableTabs(settingsManager),

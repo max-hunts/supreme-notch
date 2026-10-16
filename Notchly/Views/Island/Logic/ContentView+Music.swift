@@ -212,6 +212,8 @@ extension ContentView {
                 .transition(ExtrasPanelView.openedContentTransition)
                 .zIndex(3)
 
+                openedSwipeCatcher
+
                 if showsExtrasPanel {
                     ExtrasPanelView(
                         model: extrasPanelModel,
