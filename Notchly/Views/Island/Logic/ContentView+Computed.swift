@@ -38,7 +38,7 @@ extension ContentView {
             openedExtraHeight: showsExtrasPanel ? extrasPanelHeight + ExtrasPanelView.gapBelowTopSection : 0,
             wingsTucked: tucksWings,
             liveActivityExtraWidth: liveActivityExtraWidth,
-            batteryWingWidth: batterySideWingWidth,
+            batteryWingWidth: CompactBatteryView.chargingWingWidth(closedHeight: closedHeight),
             preferredOpenedWidth: preferredOpenedWidth
         )
     }

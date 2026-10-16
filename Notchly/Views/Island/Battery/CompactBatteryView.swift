@@ -25,8 +25,9 @@ struct CompactBatteryView: View {
     var usageBarStyle: UsageBarStyle = .colorHangs
 
     static let verticalInset: CGFloat = 2.5
-    /// Space between a glyph and the camera notch.
-    static let horizontalInset: CGFloat = 11
+    /// How far inside the notch edges macOS reports the camera housing really ends, on
+    /// each side. The island's middle keeps the reported width; only the glyphs move in.
+    static let cameraHousingInset: CGFloat = 5
     static let micIconWidth: CGFloat = 14
     static let leftWingSpacing: CGFloat = 8
 
@@ -36,7 +37,9 @@ struct CompactBatteryView: View {
         let bars = UsageBarsGlyph.width(barCount: barCount)
         let mic = micMuted ? micIconWidth : 0
         let gap = barCount > 0 && micMuted ? leftWingSpacing : 0
-        return horizontalInset + bars + gap + mic + barsOuterInset(closedHeight: closedHeight)
+        // The same gap on both sides: to the island's edge, and to the camera housing.
+        let inset = barsOuterInset(closedHeight: closedHeight)
+        return inset + bars + gap + mic + inset - cameraHousingInset
     }
 
     static func glyphHeight(closedHeight: CGFloat) -> CGFloat {
@@ -59,8 +62,20 @@ struct CompactBatteryView: View {
 
     /// The wing right of the notch that holds the glyph.
     static func wingWidth(closedHeight: CGFloat) -> CGFloat {
-        horizontalInset + StatusRingGlyph.width(forHeight: glyphHeight(closedHeight: closedHeight))
-            + ringOuterInset(closedHeight: closedHeight)
+        // The same gap on both sides: to the island's edge, and to the camera housing.
+        let inset = ringOuterInset(closedHeight: closedHeight)
+        return inset + StatusRingGlyph.width(forHeight: glyphHeight(closedHeight: closedHeight)) + inset - cameraHousingInset
+    }
+
+    /// The charging pop's wings, one each side: wide enough for "100%" beside the camera,
+    /// with the same gaps as the ring.
+    static func chargingWingWidth(closedHeight: CGFloat) -> CGFloat {
+        let inset = ringOuterInset(closedHeight: closedHeight)
+        let text = NSAttributedString(
+            string: "100%",
+            attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: ChargingPopView.percentFontSize, weight: .bold)]
+        ).size().width.rounded(.up)
+        return max(wingWidth(closedHeight: closedHeight), inset + text + inset - cameraHousingInset)
     }
 
     var body: some View {
