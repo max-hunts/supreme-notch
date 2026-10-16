@@ -38,7 +38,10 @@ extension ContentView {
             openedExtraHeight: showsExtrasPanel ? extrasPanelHeight + ExtrasPanelView.gapBelowTopSection : 0,
             wingsTucked: tucksWings,
             liveActivityExtraWidth: liveActivityExtraWidth,
-            batteryWingWidth: CompactBatteryView.chargingWingWidth(closedHeight: closedHeight),
+            batteryWingWidth: CompactBatteryView.chargingWingWidth(
+                closedHeight: closedHeight,
+                cameraHousingInset: cameraHousingInset
+            ),
             preferredOpenedWidth: preferredOpenedWidth
         )
     }
@@ -99,8 +102,13 @@ extension ContentView {
     }
 
     /// The ring's wing, right of the camera.
+    /// How far in from the reported notch edges the closed notch's glyphs may sit.
+    var cameraHousingInset: CGFloat {
+        CompactBatteryView.defaultCameraHousingInset - CGFloat(settingsManager.cameraSpacingAdjustment)
+    }
+
     var batterySideWingWidth: CGFloat {
-        CompactBatteryView.wingWidth(closedHeight: closedHeight)
+        CompactBatteryView.wingWidth(closedHeight: closedHeight, cameraHousingInset: cameraHousingInset)
     }
 
     var closedMicMuted: Bool {
@@ -119,7 +127,12 @@ extension ContentView {
 
     /// The wing left of the camera, for the usage bars and the muted mic.
     var batteryLeftWingWidth: CGFloat {
-        CompactBatteryView.leftWingWidth(barCount: closedUsageBars.count, micMuted: closedMicMuted, closedHeight: closedHeight)
+        CompactBatteryView.leftWingWidth(
+            barCount: closedUsageBars.count,
+            micMuted: closedMicMuted,
+            closedHeight: closedHeight,
+            cameraHousingInset: cameraHousingInset
+        )
     }
 
     var batterySideWingSize: CGSize {

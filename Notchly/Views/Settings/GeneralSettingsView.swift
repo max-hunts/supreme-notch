@@ -51,6 +51,12 @@ struct GeneralSettingsView: View {
 
                     SettingsDivider()
 
+                    CameraSpacingRow(settingsManager: settingsManager)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+
+                    SettingsDivider()
+
                     SettingsToggleRow(
                         title: "Launch at Login",
                         subtitle: "Open BetterNotch automatically when you sign in.",
@@ -828,5 +834,60 @@ struct GlancesSettingsView: View {
                 .padding(.horizontal, 4)
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+}
+
+/// Moves the closed notch's glyphs toward or away from the camera, both sides alike.
+private struct CameraSpacingRow: View {
+    @ObservedObject var settingsManager: SettingsManager
+
+    private var valueText: String {
+        let value = settingsManager.cameraSpacingAdjustment
+        if settingsManager.isCameraSpacingDefault { return "Default" }
+        let points = value.truncatingRemainder(dividingBy: 1) == 0 ? String(Int(abs(value))) : String(format: "%.1f", abs(value))
+        return value > 0 ? "+\(points) pt" : "\u{2212}\(points) pt"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Space Beside Camera")
+                        .font(.system(size: 13, weight: .medium))
+
+                    Text("Moves the usage bars and status ring toward or away from the camera.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text(valueText)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+
+                Button("Reset") {
+                    withAnimation(.smooth(duration: 0.25)) { settingsManager.resetCameraSpacing() }
+                }
+                .controlSize(.small)
+                .disabled(settingsManager.isCameraSpacingDefault)
+                .help("Return to the default spacing")
+            }
+
+            HStack(spacing: 8) {
+                Text("Closer")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                Slider(
+                    value: $settingsManager.cameraSpacingAdjustment,
+                    in: SettingsManager.cameraSpacingRange,
+                    step: 0.5
+                )
+                Text("Further")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+        }
     }
 }

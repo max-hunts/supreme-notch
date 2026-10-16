@@ -63,6 +63,7 @@ final class SettingsManager: ObservableObject {
         static let showBattery = true
         static let showMusic = true
         static let islandWidth = 318.0
+        static let cameraSpacingAdjustment = 0.0
         static let displayTarget = DisplayTarget.builtIn
         static let lowBatteryThreshold = 20
         static let musicPreviewDuration = 2.0
@@ -118,6 +119,18 @@ final class SettingsManager: ObservableObject {
     @Published var showMusic: Bool {
         didSet { UserDefaults.standard.set(showMusic, forKey: "showMusic") }
     }
+
+    /// Extra space between the closed notch's glyphs and the camera, in points. Negative
+    /// moves them closer.
+    @Published var cameraSpacingAdjustment: Double {
+        didSet { UserDefaults.standard.set(cameraSpacingAdjustment, forKey: "cameraSpacingAdjustment") }
+    }
+
+    static let cameraSpacingRange: ClosedRange<Double> = -4...4
+
+    var isCameraSpacingDefault: Bool { cameraSpacingAdjustment == Defaults.cameraSpacingAdjustment }
+
+    func resetCameraSpacing() { cameraSpacingAdjustment = Defaults.cameraSpacingAdjustment }
 
     @Published var islandWidth: Double {
         didSet { UserDefaults.standard.set(islandWidth, forKey: "islandWidth") }
@@ -347,6 +360,9 @@ final class SettingsManager: ObservableObject {
         self.showBattery = UserDefaults.standard.object(forKey: "showBattery") as? Bool ?? Defaults.showBattery
         self.showMusic = UserDefaults.standard.object(forKey: "showMusic") as? Bool ?? Defaults.showMusic
         self.islandWidth = UserDefaults.standard.object(forKey: "islandWidth") as? Double ?? Defaults.islandWidth
+        self.cameraSpacingAdjustment = (UserDefaults.standard.object(forKey: "cameraSpacingAdjustment") as? Double)
+            .map { min(max($0, Self.cameraSpacingRange.lowerBound), Self.cameraSpacingRange.upperBound) }
+            ?? Defaults.cameraSpacingAdjustment
         self.displayTarget = Self.loadDisplayTarget()
         self.lowBatteryThreshold = UserDefaults.standard.object(forKey: "lowBatteryThreshold") as? Int ?? Defaults.lowBatteryThreshold
         self.musicPreviewDuration = UserDefaults.standard.object(forKey: "musicPreviewDuration") as? Double ?? Defaults.musicPreviewDuration
@@ -411,6 +427,7 @@ final class SettingsManager: ObservableObject {
 
     func resetGeneralSettings() {
         islandWidth = Defaults.islandWidth
+        cameraSpacingAdjustment = Defaults.cameraSpacingAdjustment
         displayTarget = Defaults.displayTarget
         launchAtLogin = Defaults.launchAtLogin
         enableLockSound = Defaults.enableLockSound

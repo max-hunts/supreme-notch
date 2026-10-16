@@ -58,7 +58,8 @@ extension ContentView {
                     hoverOffsetY: hoverOffsetY,
                     micMuted: closedMicMuted,
                     usageBars: closedUsageBars,
-                    usageBarStyle: settingsManager.usageBarStyle
+                    usageBarStyle: settingsManager.usageBarStyle,
+                    cameraHousingInset: cameraHousingInset
                 )
                 .opacity(tucksWings ? 0 : 1)
                 .scaleEffect(x: tucksWings ? 0.6 : 1, y: tucksWings ? 0.85 : 1, anchor: .center)

@@ -23,16 +23,23 @@ struct CompactBatteryView: View {
     var micMuted = false
     var usageBars: [UsageBar] = []
     var usageBarStyle: UsageBarStyle = .colorHangs
+    var cameraHousingInset: CGFloat = Self.defaultCameraHousingInset
 
     static let verticalInset: CGFloat = 2.5
     /// How far inside the notch edges macOS reports the camera housing really ends, on
     /// each side. The island's middle keeps the reported width; only the glyphs move in.
-    static let cameraHousingInset: CGFloat = 3.5
+    /// Settings > General > Space Beside Camera shifts it.
+    static let defaultCameraHousingInset: CGFloat = 3.5
     static let micIconWidth: CGFloat = 14
     static let leftWingSpacing: CGFloat = 8
 
     /// The wing left of the camera for the usage bars and muted mic; 0 when both are off.
-    static func leftWingWidth(barCount: Int, micMuted: Bool, closedHeight: CGFloat) -> CGFloat {
+    static func leftWingWidth(
+        barCount: Int,
+        micMuted: Bool,
+        closedHeight: CGFloat,
+        cameraHousingInset: CGFloat = defaultCameraHousingInset
+    ) -> CGFloat {
         guard barCount > 0 || micMuted else { return 0 }
         let bars = UsageBarsGlyph.width(barCount: barCount)
         let mic = micMuted ? micIconWidth : 0
@@ -61,7 +68,7 @@ struct CompactBatteryView: View {
     }
 
     /// The wing right of the notch that holds the glyph.
-    static func wingWidth(closedHeight: CGFloat) -> CGFloat {
+    static func wingWidth(closedHeight: CGFloat, cameraHousingInset: CGFloat = defaultCameraHousingInset) -> CGFloat {
         // The same gap on both sides: to the island's edge, and to the camera housing.
         let inset = ringOuterInset(closedHeight: closedHeight)
         return inset + StatusRingGlyph.width(forHeight: glyphHeight(closedHeight: closedHeight)) + inset - cameraHousingInset
@@ -69,17 +76,25 @@ struct CompactBatteryView: View {
 
     /// The charging pop's wings, one each side: wide enough for "100%" beside the camera,
     /// with the same gaps as the ring.
-    static func chargingWingWidth(closedHeight: CGFloat) -> CGFloat {
+    static func chargingWingWidth(closedHeight: CGFloat, cameraHousingInset: CGFloat = defaultCameraHousingInset) -> CGFloat {
         let inset = ringOuterInset(closedHeight: closedHeight)
         let text = NSAttributedString(
             string: "100%",
             attributes: [.font: NSFont.monospacedDigitSystemFont(ofSize: ChargingPopView.percentFontSize, weight: .bold)]
         ).size().width.rounded(.up)
-        return max(wingWidth(closedHeight: closedHeight), inset + text + inset - cameraHousingInset)
+        return max(
+            wingWidth(closedHeight: closedHeight, cameraHousingInset: cameraHousingInset),
+            inset + text + inset - cameraHousingInset
+        )
     }
 
     var body: some View {
-        let leftWing = Self.leftWingWidth(barCount: usageBars.count, micMuted: micMuted, closedHeight: size.height)
+        let leftWing = Self.leftWingWidth(
+            barCount: usageBars.count,
+            micMuted: micMuted,
+            closedHeight: size.height,
+            cameraHousingInset: cameraHousingInset
+        )
         HStack(spacing: 0) {
             if leftWing > 0 {
                 HStack(spacing: Self.leftWingSpacing) {

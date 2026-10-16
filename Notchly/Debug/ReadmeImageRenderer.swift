@@ -41,6 +41,12 @@ enum ReadmeImageRenderer {
         save(AIUsageSettingsView(settingsManager: environment.settingsManager)
                 .frame(width: 560).padding(20).background(Color(white: 0.16)).environment(\.colorScheme, .dark),
              as: "check-usage-settings.png", in: directory)
+        environment.settingsManager.cameraSpacingAdjustment = 1.5
+        save(GeneralSettingsView(settingsManager: environment.settingsManager,
+                                 lockScreenIdentityManager: environment.lockScreenIdentityManager)
+                .frame(width: 560).padding(20).background(Color(white: 0.16)).environment(\.colorScheme, .dark),
+             as: "check-general-settings.png", in: directory)
+        environment.settingsManager.cameraSpacingAdjustment = 0
 
         let now = Date()
         let approval = AgentApprovalRequest(
