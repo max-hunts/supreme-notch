@@ -137,6 +137,14 @@ codesign --force --options runtime --timestamp --sign "Developer ID Application:
   --preserve-metadata=entitlements,requirements,flags,runtime BetterNotch.app
 ```
 
+The `scripts` folder has the rest of the workflow, all for a Mac with Xcode:
+
+- `scripts/build-run.sh VERSION BUILD` builds a signed Release, bundles the usage monitor, installs it in Applications and opens it. It is not notarized; use it while iterating.
+- `scripts/release.sh VERSION BUILD` does the same, then notarizes and staples it and writes the release zip. It needs a notarytool keychain profile (`NOTARY_PROFILE`, default `max-hunt-notary`).
+- `scripts/render-readme-glyphs.sh` redraws the status ring, closed notch and usage color images in `docs/images`.
+
+Both build scripts expect a [claude-usage-monitor](https://github.com/max-hunts/claude-usage-monitor) checkout at `~/Desktop/claude-usage-monitor`, or wherever `USAGE_MONITOR_DIR` points.
+
 To check alert spacing after a layout change, run `scripts/layout-check.sh`. It shows sample alerts in the real island, saves a picture of each, and fails if the buttons are not 12 pt from the island's edges or the text sits too far above them.
 
 The README images are drawn by the app's own views with sample data. In a Debug build, run `BetterNotch.app/Contents/MacOS/BetterNotch -renderReadmeImages <folder>` to regenerate the tab and alert images.
