@@ -27,7 +27,7 @@ struct CompactBatteryView: View {
     static let verticalInset: CGFloat = 2.5
     /// How far inside the notch edges macOS reports the camera housing really ends, on
     /// each side. The island's middle keeps the reported width; only the glyphs move in.
-    static let cameraHousingInset: CGFloat = 5
+    static let cameraHousingInset: CGFloat = 3.5
     static let micIconWidth: CGFloat = 14
     static let leftWingSpacing: CGFloat = 8
 
