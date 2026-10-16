@@ -258,9 +258,8 @@ struct ExtrasPanelView: View {
                     .transition(.opacity)
             }
 
-            // Starts on the same line as the row highlights below it, so the panel reads
-            // as one column.
             HStack(spacing: 4) {
+                Spacer(minLength: 0)
                 ForEach(tabs) { tab in
                     TabChip(
                         tab: tab,
@@ -275,7 +274,6 @@ struct ExtrasPanelView: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(.leading, IslandMetrics.rowEdgeInset - IslandMetrics.contentInset)
             .frame(height: Self.headerHeight - 4)
             .padding(.bottom, Self.contentGap(for: selected))
 
