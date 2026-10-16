@@ -537,6 +537,8 @@ final class AgentEventManager: ObservableObject {
             }
         }
 
+        watchBrowserAction(source: source, sessionID: sessionID, hookEvent: nonEmpty(payload.hookEvent), toolName: toolName)
+
         switch kind {
         case .accessRequest:
             if let requestID {
@@ -566,7 +568,7 @@ final class AgentEventManager: ObservableObject {
                 }, release: true)
             }
             if pendingApprovals.isEmpty {
-                clearCurrentEvent(for: source)
+                clearCurrentEvent(for: source, sessionID: sessionID)
             }
             return
 
@@ -581,6 +583,61 @@ final class AgentEventManager: ObservableObject {
         }
 
         guard let event = makeEvent(from: payload, source: source) else { return }
+        showEvent(event)
+    }
+
+    // MARK: - Browser actions waiting on the Claude app
+
+    /// How long a browser action may run before the notch says it may be waiting for you.
+    static let browserWaitThreshold: Duration = .seconds(4)
+    private var browserWaitTasks: [String: Task<Void, Never>] = [:]
+
+    /// The Claude app asks before Claude clicks or types on a site you have not allowed, but
+    /// it asks inside the browser tool, so no permission hook fires. A browser action that
+    /// has not finished after a few seconds is most likely waiting on that prompt.
+    private func watchBrowserAction(source: String, sessionID: String?, hookEvent: String?, toolName: String?) {
+        guard source == "claude", let sessionID else { return }
+        // Anything else from the session means the action finished or was answered.
+        browserWaitTasks.removeValue(forKey: sessionID)?.cancel()
+        guard hookEvent == "PreToolUse", let toolName, Self.isBrowserTool(toolName) else { return }
+
+        browserWaitTasks[sessionID] = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.browserWaitThreshold)
+            guard !Task.isCancelled, let self else { return }
+            self.browserWaitTasks[sessionID] = nil
+            self.presentBrowserWait(sessionID: sessionID)
+        }
+    }
+
+    nonisolated static func isBrowserTool(_ toolName: String) -> Bool {
+        toolName.hasPrefix("mcp__Claude_Browser__") || toolName.hasPrefix("mcp__claude-in-chrome__")
+    }
+
+    private func presentBrowserWait(sessionID: String) {
+        let session = sessionTracker.sessions.first { $0.id == sessionID }
+        let name = session?.displayName
+        let event = AgentEvent(
+            id: UUID(),
+            source: "claude",
+            kind: .waiting,
+            title: name.map { "Claude may need you · \($0)" } ?? "Claude may need you",
+            message: nil,
+            // Stays until the action finishes, which clears it, or this runs out.
+            ttl: 60,
+            createdAt: Date(),
+            detail: "A browser action is waiting. Check the Claude app for a permission prompt.",
+            buttons: [GlanceButton(
+                title: "Open session",
+                systemImage: "arrow.up.forward.app",
+                isPrimary: true,
+                action: .openSession(id: sessionID, source: "claude")
+            )],
+            sessionID: sessionID
+        )
+        // Each wait is a new action, not a repeat of the last one, unless it is still showing.
+        if currentEvent.map(duplicateKey(for:)) != duplicateKey(for: event) {
+            lastShownEventKey = nil
+        }
         showEvent(event)
     }
 
@@ -668,8 +725,9 @@ final class AgentEventManager: ObservableObject {
             // Activity from the agent makes its held "waiting" or "needs you" alert stale.
             heldEvents.removeAll {
                 $0.source.lowercased() == event.source.lowercased() && $0.kind != .completed && !$0.isSticky
+                    && ($0.sessionID == nil || event.sessionID == nil || $0.sessionID == event.sessionID)
             }
-            clearCurrentEvent(for: event.source)
+            clearCurrentEvent(for: event.source, sessionID: event.sessionID)
             return
         }
 
@@ -758,13 +816,16 @@ final class AgentEventManager: ObservableObject {
         eventID += 1
     }
 
-    private func clearCurrentEvent(for source: String) {
+    /// Activity from an agent clears its waiting alert. With several sessions running, only
+    /// the session the alert is about can clear it.
+    private func clearCurrentEvent(for source: String, sessionID: String?) {
         let normalizedSource = source.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard let currentEvent,
               currentEvent.approval == nil,
               currentEvent.source.lowercased() == normalizedSource else {
             return
         }
+        if let alertSession = currentEvent.sessionID, let sessionID, alertSession != sessionID { return }
 
         // Keep summaries and glances on screen for their full duration.
         guard currentEvent.kind != .completed, !currentEvent.isSticky else { return }
