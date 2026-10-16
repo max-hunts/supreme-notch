@@ -35,7 +35,11 @@ struct IslandLayout {
     let spacing: CGFloat = 10
 
     var baseWidth: CGFloat {
-        min(max(islandWidth, allowsCompactBaseWidth ? 160 : 280), 360)
+        Self.baseWidth(islandWidth: islandWidth, allowsCompact: allowsCompactBaseWidth)
+    }
+
+    static func baseWidth(islandWidth: CGFloat, allowsCompact: Bool) -> CGFloat {
+        min(max(islandWidth, allowsCompact ? 160 : 280), 360)
     }
 
     var closedSize: CGSize {

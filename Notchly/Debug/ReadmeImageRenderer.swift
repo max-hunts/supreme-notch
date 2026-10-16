@@ -245,7 +245,7 @@ private struct NoticeIsland: View {
     let event: AgentEvent
 
     var body: some View {
-        let size = CGSize(width: 340, height: AgentActivityView.contentHeight(for: event) ?? 68)
+        let size = CGSize(width: 340, height: AgentActivityView.contentHeight(for: event, width: 340) ?? 68)
         ZStack(alignment: .top) {
             UnevenRoundedRectangle(bottomLeadingRadius: IslandMetrics.noticeRadius, bottomTrailingRadius: IslandMetrics.noticeRadius)
                 .fill(Color.black)

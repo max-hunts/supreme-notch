@@ -71,7 +71,7 @@ extension ContentView {
                         )
                     }
                 }
-                .frame(width: layout.agentPreviewSize.width + layout.cornerRadius * 2, height: layout.agentPreviewSize.height)
+                .frame(width: layout.agentPreviewSize.width + layout.cornerRadius * 2, height: layout.agentPreviewSize.height, alignment: .top)
             }
             .overlay {
                 if event?.approval == nil && (event?.buttons.isEmpty ?? true) {

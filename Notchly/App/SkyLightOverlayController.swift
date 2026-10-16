@@ -127,6 +127,10 @@ final class SkyLightOverlayController {
         self.environment = environment
     }
 
+    #if DEBUG
+    var debugIslandWindow: NSWindow? { islandWindowController?.window }
+    #endif
+
     func show() {
         installScreenObserver()
         installSettingsObserver()

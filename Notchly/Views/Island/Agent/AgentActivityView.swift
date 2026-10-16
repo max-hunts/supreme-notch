@@ -25,22 +25,48 @@ struct AgentActivityView: View {
         screenHasNotch ? max(0, closedHeight - headerTop) : 0
     }
 
-    /// Island content height for an event, or nil to use the default preview height.
-    static func contentHeight(for event: AgentEvent?) -> CGFloat? {
+    /// Space between an alert's text and its buttons.
+    static let textToButtonsGap: CGFloat = 14
+
+    /// Island content height for an event at a given island width, or nil to use the
+    /// default preview height. Alerts with buttons fit their text, so a one-line message
+    /// does not leave a gap above the buttons.
+    static func contentHeight(for event: AgentEvent?, width: CGFloat) -> CGFloat? {
         guard let event else { return nil }
+        let textWidth = width - IslandMetrics.edgeInset * 2
+        // Header and buttons: content offset, top padding, header row and the gap below it,
+        // then the buttons and the inset under them.
+        let chrome = contentTopOffset + 4 + 22 + 6 + textToButtonsGap
+            + IslandMetrics.buttonHeight + IslandMetrics.edgeInset
         if let approval = event.approval {
-            return approval.detail == nil ? 140 : 156
+            var text = textHeight(approval.summary, font: .monospacedSystemFont(ofSize: 12, weight: .medium),
+                                  width: textWidth, maxLines: 2)
+            if let detail = approval.detail {
+                text += 3 + textHeight(detail, font: .systemFont(ofSize: 11, weight: .medium), width: textWidth, maxLines: 1)
+            }
+            return (chrome + text).rounded(.up)
         }
         if !event.batteryParts.isEmpty || event.progressKey != nil {
             return 92
         }
-        if event.detail != nil && !event.buttons.isEmpty {
-            return 140
+        if let detail = event.detail, !event.buttons.isEmpty {
+            let text = textHeight(detail, font: .systemFont(ofSize: 13, weight: .semibold), width: textWidth, maxLines: 2)
+            return (chrome + text).rounded(.up)
         }
         if event.detail != nil {
             return 98
         }
         return nil
+    }
+
+    /// Height of text wrapped to a width, capped at a number of lines.
+    private static func textHeight(_ string: String, font: NSFont, width: CGFloat, maxLines: Int) -> CGFloat {
+        let lineHeight = NSLayoutManager().defaultLineHeight(for: font)
+        let bounds = NSAttributedString(string: string, attributes: [.font: font]).boundingRect(
+            with: NSSize(width: width, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading]
+        )
+        return min(max(bounds.height, lineHeight), lineHeight * CGFloat(maxLines)).rounded(.up)
     }
 
     var body: some View {
@@ -221,7 +247,7 @@ private struct AgentApprovalContent: View {
                     .padding(.top, 3)
             }
 
-            Spacer(minLength: 10)
+            Spacer(minLength: 6)
 
             HStack(spacing: 8) {
                 decisionButton("Deny", isPrimary: false, decision: .deny)
@@ -494,7 +520,7 @@ private struct GlanceWithButtons: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
 
-            Spacer(minLength: 10)
+            Spacer(minLength: 6)
 
             HStack(spacing: 8) {
                 ForEach(event.buttons) { button in

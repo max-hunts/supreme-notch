@@ -11,7 +11,8 @@ import AppKit
 final class AppDelegate: NSObject, NSApplicationDelegate {
     // The rename migration must run before any manager reads its settings.
     private let environment: AppEnvironment = {
-        if !ProcessInfo.processInfo.arguments.contains("-renderReadmeImages") {
+        let arguments = ProcessInfo.processInfo.arguments
+        if !arguments.contains("-renderReadmeImages") && !arguments.contains("-layoutCheck") {
             LegacyIdentityMigration.runIfNeeded()
         }
         return AppEnvironment()
@@ -101,6 +102,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             self.startupTask = nil
         }
+
+        #if DEBUG
+        if let directory = LayoutCheck.outputDirectory {
+            LayoutCheck.run(environment: environment, window: { [weak self] in
+                self?.overlayController.debugIslandWindow
+            }, to: directory)
+        }
+        #endif
     }
 
     func applicationWillTerminate(_ notification: Notification) {

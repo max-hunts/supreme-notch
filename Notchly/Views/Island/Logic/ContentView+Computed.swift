@@ -30,7 +30,10 @@ extension ContentView {
             islandWidth: effectiveIslandWidth,
             allowsCompactBaseWidth: musicStartUsesIdleWidth,
             idleWidthOverride: configuredIdleIslandWidth,
-            agentContentHeight: AgentActivityView.contentHeight(for: activeAgentEvent),
+            agentContentHeight: AgentActivityView.contentHeight(
+                for: activeAgentEvent,
+                width: IslandLayout.baseWidth(islandWidth: effectiveIslandWidth, allowsCompact: musicStartUsesIdleWidth)
+            ),
             agentTopClearance: agentTopClearance,
             openedExtraHeight: showsExtrasPanel ? extrasPanelHeight + ExtrasPanelView.gapBelowTopSection : 0,
             wingsTucked: tucksWings,

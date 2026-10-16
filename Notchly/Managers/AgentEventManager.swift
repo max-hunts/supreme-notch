@@ -658,6 +658,11 @@ final class AgentEventManager: ObservableObject {
         }
     }
 
+    #if DEBUG
+    /// Shows a sample alert for the layout check.
+    func debugShow(_ event: AgentEvent) { showEvent(event, playSound: false) }
+    #endif
+
     private func showEvent(_ event: AgentEvent, playSound: Bool = true) {
         if event.kind == .clear {
             // Activity from the agent makes its held "waiting" or "needs you" alert stale.
