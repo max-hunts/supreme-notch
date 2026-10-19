@@ -192,7 +192,7 @@ private struct UsageBarChoices: View {
         switch kind {
         case .fiveHour: return "Claude's 5-hour session limit"
         case .weekly: return "Claude's weekly limit across all models"
-        case .modelWeekly: return "Claude's weekly limits for a single model, such as Fable"
+        case .modelWeekly: return "Claude's weekly limit for Fable"
         case .codexWeekly: return "Codex's weekly limit"
         }
     }

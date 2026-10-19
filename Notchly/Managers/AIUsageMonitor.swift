@@ -23,7 +23,7 @@ nonisolated enum UsageLimitKind: String, CaseIterable, Identifiable, Sendable {
         switch self {
         case .fiveHour: return "5-hour"
         case .weekly: return "Weekly"
-        case .modelWeekly: return "Model weekly"
+        case .modelWeekly: return "Fable weekly"
         case .codexWeekly: return "Codex weekly"
         }
     }
