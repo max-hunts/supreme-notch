@@ -69,7 +69,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menuController.install()
         environment.claudeHookIntegrationManager.migrateIfNeeded()
         environment.codexHookIntegrationManager.migrateIfNeeded()
+        #if DEBUG
+        // The layout check shows only its own sample alerts, never real ones.
+        if LayoutCheck.outputDirectory == nil { environment.agentEventManager.start() }
+        #else
         environment.agentEventManager.start()
+        #endif
         environment.musicManager.start()
         environment.networkStatusManager.start()
         overlayController.show()

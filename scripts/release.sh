@@ -12,6 +12,11 @@ xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1 ||
 BUILD=${2:?Usage: scripts/release.sh VERSION BUILD. Needs the notary keychain profile on this Mac.}
 cd "$ROOT"
 rm -rf "$SC/BetterNotch.xcarchive" "$SC/export"
+DD="$SC/DerivedData"
+# macOS clears old files from the temporary folder, which can leave the Sparkle package
+# half gone; start that cache over when it is.
+SPARKLE="$DD/SourcePackages/artifacts/sparkle/Sparkle/Sparkle.xcframework"
+[ -d "$SPARKLE" ] && [ ! -f "$SPARKLE/Info.plist" ] && rm -rf "$DD/SourcePackages"
 xcodebuild -project Notchly.xcodeproj -scheme Notchly -configuration Release -derivedDataPath "$SC/DerivedData" \
   -archivePath "$SC/BetterNotch.xcarchive" archive DEVELOPMENT_TEAM=36JR976L6Y CODE_SIGN_STYLE=Manual \
   "CODE_SIGN_IDENTITY=Developer ID Application" OTHER_CODE_SIGN_FLAGS=--timestamp \

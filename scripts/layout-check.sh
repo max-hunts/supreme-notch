@@ -8,6 +8,11 @@ ROOT=$(cd "$(dirname "$0")/.." && pwd)
 WORK=${TMPDIR:-/tmp}/betternotch-layout-check
 OUT=${1:-$WORK/out}
 cd "$ROOT"
+DD="$WORK/DerivedData"
+# macOS clears old files from the temporary folder, which can leave the Sparkle package
+# half gone; start that cache over when it is.
+SPARKLE="$DD/SourcePackages/artifacts/sparkle/Sparkle/Sparkle.xcframework"
+[ -d "$SPARKLE" ] && [ ! -f "$SPARKLE/Info.plist" ] && rm -rf "$DD/SourcePackages"
 xcodebuild -project Notchly.xcodeproj -scheme Notchly -configuration Debug -derivedDataPath "$WORK/DerivedData" \
   build > "$WORK.build.log" 2>&1 || { grep -E "error:" "$WORK.build.log" | sort -u | head -20; exit 1; }
 APP="$WORK/DerivedData/Build/Products/Debug/BetterNotch.app"
