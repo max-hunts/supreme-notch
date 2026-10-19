@@ -103,6 +103,7 @@ final class SettingsManager: ObservableObject {
         static let showMeetingCountdown = true
         static let showUsageTab = true
         static let usageBarStyle = UsageBarStyle.colorHangs
+        static let chargeHoldStyle = ChargeHoldStyle.teal
         static let showSystemTab = true
         static let showFileShelf = true
         static let showMicMute = true
@@ -336,6 +337,11 @@ final class SettingsManager: ObservableObject {
         if shows { hiddenUsageBars.remove(kind) } else { hiddenUsageBars.insert(kind) }
     }
 
+    /// How the status ring shows that macOS is holding the charge to protect the battery.
+    @Published var chargeHoldStyle: ChargeHoldStyle {
+        didSet { UserDefaults.standard.set(chargeHoldStyle.rawValue, forKey: "chargeHoldStyle") }
+    }
+
     @Published var usageBarStyle: UsageBarStyle {
         didSet { UserDefaults.standard.set(usageBarStyle.rawValue, forKey: "usageBarStyle") }
     }
@@ -426,6 +432,8 @@ final class SettingsManager: ObservableObject {
         self.showUsageTab = UserDefaults.standard.object(forKey: "showUsageTab") as? Bool ?? Defaults.showUsageTab
         self.hiddenUsageBars = Set((UserDefaults.standard.stringArray(forKey: "hiddenUsageBars") ?? [])
             .compactMap(UsageLimitKind.init(rawValue:)))
+        self.chargeHoldStyle = UserDefaults.standard.string(forKey: "chargeHoldStyle").flatMap(ChargeHoldStyle.init(rawValue:))
+            ?? Defaults.chargeHoldStyle
         self.usageBarStyle = UserDefaults.standard.string(forKey: "usageBarStyle").flatMap(UsageBarStyle.init(rawValue:))
             ?? Defaults.usageBarStyle
         self.showSystemTab = UserDefaults.standard.object(forKey: "showSystemTab") as? Bool ?? Defaults.showSystemTab

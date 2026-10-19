@@ -13,6 +13,10 @@ import Combine
 final class BatteryManager: ObservableObject {
     @Published var batteryLevel: Int = 0
     @Published var isCharging: Bool = false
+    /// On power but not charging, short of full: macOS is holding the charge to protect the
+    /// battery (Optimized Battery Charging, a charge limit, or "Charging On Hold").
+    @Published private(set) var isChargeOnHold = false
+    private var onHoldTask: Task<Void, Never>?
     /// Low Power Mode turns the status ring yellow; publishing it redraws the ring at once.
     @Published private(set) var isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
     private var lowPowerObserver: NSObjectProtocol?
@@ -40,6 +44,40 @@ final class BatteryManager: ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
             self?.refreshLowPowerMode()
         }
+    }
+
+    /// Plugging in can read as "on power, not charging" for a moment before charging starts,
+    /// so on hold only shows once it has lasted a few seconds.
+    private func updateChargeOnHold(onHold: Bool) {
+        guard onHold else {
+            onHoldTask?.cancel()
+            onHoldTask = nil
+            if isChargeOnHold { isChargeOnHold = false }
+            return
+        }
+        guard !isChargeOnHold, onHoldTask == nil else { return }
+        onHoldTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard !Task.isCancelled, let self else { return }
+            self.onHoldTask = nil
+            self.updateBatteryInfo()
+            // Still on hold after the wait: show it.
+            if self.isCharging, self.batteryLevel < 100, self.onHoldStillReported() {
+                self.isChargeOnHold = true
+            }
+        }
+    }
+
+    private func onHoldStillReported() -> Bool {
+        guard let snapshot = IOPSCopyPowerSourcesInfo()?.takeRetainedValue(),
+              let sources = IOPSCopyPowerSourcesList(snapshot)?.takeRetainedValue() as? [CFTypeRef],
+              let source = sources.first,
+              let description = IOPSGetPowerSourceDescription(snapshot, source)?.takeUnretainedValue() as? [String: Any] else {
+            return false
+        }
+        let charging = description[kIOPSIsChargingKey as String] as? Bool ?? false
+        let state = description[kIOPSPowerSourceStateKey as String] as? String ?? ""
+        return state == kIOPSACPowerValue && !charging
     }
 
     private func refreshLowPowerMode() {
@@ -114,6 +152,7 @@ final class BatteryManager: ObservableObject {
             guard let self else { return }
             let nextIsCharging = charging || powerSourceState == kIOPSACPowerValue
             self.refreshLowPowerMode()
+            self.updateChargeOnHold(onHold: powerSourceState == kIOPSACPowerValue && !charging && percent < 100)
 
             if self.batteryLevel != percent {
                 self.batteryLevel = percent

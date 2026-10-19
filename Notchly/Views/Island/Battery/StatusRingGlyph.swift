@@ -11,6 +11,40 @@
 
 import SwiftUI
 
+/// How the ring shows that macOS is holding the charge to protect the battery.
+enum ChargeHoldStyle: String, CaseIterable, Identifiable {
+    /// The ring turns teal, its own color for "on hold".
+    case teal
+    /// Green up to the charge, with a white tick where it stopped.
+    case limitMarker
+    /// Green up to the charge; the rest waits as dim ticks.
+    case ticksForLater
+    /// The green arc drawn as an outline.
+    case hollow
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .teal: return "Calm teal"
+        case .limitMarker: return "Limit marker"
+        case .ticksForLater: return "Ticks for later"
+        case .hollow: return "Hollow ring"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .teal: return "Its own color"
+        case .limitMarker: return "A tick where it stopped"
+        case .ticksForLater: return "The rest waits as ticks"
+        case .hollow: return "Outlined, not filled"
+        }
+    }
+
+    static let tealColor = Color(red: 0.31, green: 0.82, blue: 0.77)
+}
+
 struct StatusRingGlyph: View {
     let batteryLevel: Int
     let isCharging: Bool
@@ -23,6 +57,9 @@ struct StatusRingGlyph: View {
     var height: CGFloat = 22
     /// From BatteryManager, which keeps it current; macOS can misreport it right after launch.
     var isLowPowerMode = false
+    /// On power, but macOS is holding the charge short of full.
+    var isChargeOnHold = false
+    var chargeHoldStyle: ChargeHoldStyle = .teal
 
     /// The ring top and the lowest dot edge, in 32 pt canvas units. The drawing sits
     /// above the canvas center, so it is shifted down to center what is actually drawn.
@@ -56,7 +93,8 @@ struct StatusRingGlyph: View {
     }
 
     private var ringColor: Color {
-        Self.stateColor(
+        if holdStyle == .teal { return ChargeHoldStyle.tealColor }
+        return Self.stateColor(
             isCharging: isCharging,
             batteryLevel: batteryLevel,
             lowBatteryThreshold: lowBatteryThreshold,
@@ -75,16 +113,7 @@ struct StatusRingGlyph: View {
 
     var body: some View {
         ZStack {
-            // While plugged in the ring turns green over a dim full track; no bolt.
-            StatusArcShape(startDegrees: arcStart, endDegrees: arcEnd, progress: 1)
-                .stroke(ringColor, style: ringStroke)
-                .frame(width: ringPathDiameter, height: ringPathDiameter)
-                .offset(y: Self.ringYOffset)
-                // The ticks stand alone, with nothing showing through their gaps.
-                .opacity(isCharging && !isFullOnPower ? 0.24 : 0)
-
-            StatusArcShape(startDegrees: arcStart, endDegrees: arcEnd, progress: progress)
-                .stroke(ringColor, style: isFullOnPower ? fullTickStroke : ringStroke)
+            batteryArc
                 .frame(width: ringPathDiameter, height: ringPathDiameter)
                 .offset(y: Self.ringYOffset)
 
@@ -134,6 +163,66 @@ struct StatusRingGlyph: View {
     /// Plugged in and full: the green ring breaks into fine ticks, so full reads differently
     /// from still charging.
     private var isFullOnPower: Bool { isCharging && batteryLevel >= 100 }
+
+    /// The on-hold style in effect, or nil when the charge is not on hold.
+    private var holdStyle: ChargeHoldStyle? {
+        isCharging && isChargeOnHold && !isFullOnPower ? chargeHoldStyle : nil
+    }
+
+    /// Where the charge stopped, in degrees along the ring.
+    private var stopDegrees: Double { arcStart + (arcEnd - arcStart) * Double(progress) }
+
+    @ViewBuilder
+    private var batteryArc: some View {
+        let track = StatusArcShape(startDegrees: arcStart, endDegrees: arcEnd, progress: 1)
+        let level = StatusArcShape(startDegrees: arcStart, endDegrees: arcEnd, progress: progress)
+        switch holdStyle {
+        case .limitMarker:
+            ZStack {
+                track.stroke(Color.white.opacity(0.12), style: ringStroke)
+                level.stroke(ringColor, style: ringStroke)
+                limitMarker
+            }
+        case .ticksForLater:
+            ZStack {
+                StatusArcShape(startDegrees: stopDegrees, endDegrees: arcEnd, progress: 1)
+                    .stroke(ringColor.opacity(0.55), style: laterTickStroke)
+                level.stroke(ringColor, style: ringStroke)
+            }
+        case .hollow:
+            ZStack {
+                level.stroke(ringColor, style: ringStroke)
+                // Cutting the middle out of the arc leaves its outline; the notch is black.
+                level.stroke(Color.black, style: StrokeStyle(lineWidth: Self.arcLineWidth * 0.42, lineCap: .round))
+            }
+        case .teal, nil:
+            ZStack {
+                // While plugged in the ring fills over a dim full track; no bolt. The full
+                // ticks stand alone, with nothing showing through their gaps.
+                track.stroke(ringColor, style: ringStroke)
+                    .opacity(isCharging && !isFullOnPower ? 0.24 : 0)
+                level.stroke(ringColor, style: isFullOnPower ? fullTickStroke : ringStroke)
+            }
+        }
+    }
+
+    /// A short white line across the ring where the charge stopped.
+    private var limitMarker: some View {
+        let radians = stopDegrees * .pi / 180
+        let radius = ringPathDiameter / 2
+        return Capsule()
+            .fill(Color.white)
+            .frame(width: Self.arcLineWidth * 2, height: Self.arcLineWidth * 0.5)
+            .rotationEffect(.radians(radians))
+            .offset(x: radius * CGFloat(cos(radians)), y: radius * CGFloat(sin(radians)))
+    }
+
+    /// The full-battery ticks, phased so the waiting ticks sit where full ones would.
+    private var laterTickStroke: StrokeStyle {
+        var stroke = fullTickStroke
+        stroke.dashPhase = ringPathDiameter / 2 * CGFloat((stopDegrees - arcStart) * .pi / 180)
+        return stroke
+    }
 
     static let fullTickCount = 24
     /// The share of each tick's step that is drawn; the rest is gap.

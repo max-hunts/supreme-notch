@@ -20,6 +20,20 @@ struct ExpandedBatteryView: View {
     /// A control at the right edge, such as the mic button.
     var accessory: AnyView? = nil
     var isLowPowerMode = false
+    var isChargeOnHold = false
+    var chargeHoldStyle: ChargeHoldStyle = .teal
+
+    private var showsOnHold: Bool { isCharging && isChargeOnHold && batteryLevel < 100 }
+
+    private var labelColor: Color {
+        if showsOnHold && chargeHoldStyle == .teal { return ChargeHoldStyle.tealColor }
+        return StatusRingGlyph.stateColor(
+            isCharging: isCharging,
+            batteryLevel: batteryLevel,
+            lowBatteryThreshold: lowBatteryThreshold,
+            isLowPowerMode: isLowPowerMode
+        ) ?? .white.opacity(0.7)
+    }
 
     var body: some View {
         VStack(spacing: 5) {
@@ -31,18 +45,15 @@ struct ExpandedBatteryView: View {
                 volume: volume,
                 isMuted: isVolumeMuted,
                 height: 58,
-                isLowPowerMode: isLowPowerMode
+                isLowPowerMode: isLowPowerMode,
+                isChargeOnHold: isChargeOnHold,
+                chargeHoldStyle: chargeHoldStyle
             )
 
             // The percentage takes the ring's color when it has one.
-            Text("\(batteryLevel)%")
+            Text(showsOnHold ? "\(batteryLevel)% · On hold" : "\(batteryLevel)%")
                 .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(StatusRingGlyph.stateColor(
-                    isCharging: isCharging,
-                    batteryLevel: batteryLevel,
-                    lowBatteryThreshold: lowBatteryThreshold,
-                    isLowPowerMode: isLowPowerMode
-                ) ?? .white.opacity(0.7))
+                .foregroundStyle(labelColor)
         }
         .frame(maxWidth: .infinity)
         .overlay(alignment: .trailing) {

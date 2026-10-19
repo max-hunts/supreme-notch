@@ -25,6 +25,8 @@ struct CompactBatteryView: View {
     var usageBarStyle: UsageBarStyle = .colorHangs
     var cameraHousingInset: CGFloat = Self.defaultCameraHousingInset
     var isLowPowerMode = false
+    var isChargeOnHold = false
+    var chargeHoldStyle: ChargeHoldStyle = .teal
 
     static let verticalInset: CGFloat = 2.5
     /// How far inside the notch edges macOS reports the camera housing really ends, on
@@ -127,7 +129,9 @@ struct CompactBatteryView: View {
                 volume: volume,
                 isMuted: isVolumeMuted,
                 height: Self.glyphHeight(closedHeight: size.height),
-                isLowPowerMode: isLowPowerMode
+                isLowPowerMode: isLowPowerMode,
+                isChargeOnHold: isChargeOnHold,
+                chargeHoldStyle: chargeHoldStyle
             )
         }
         .padding(.trailing, Self.ringOuterInset(closedHeight: size.height))
