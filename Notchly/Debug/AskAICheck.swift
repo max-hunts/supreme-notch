@@ -21,6 +21,9 @@ enum AskAICheck {
         let model = AskAIModel()
         Task { @MainActor in
             var lines: [String] = []
+            // As in the app: clicking into the field starts Codex before the question.
+            model.beginEditing()
+            try? await Task.sleep(for: .seconds(3))
             for question in ["What is the tallest mountain in Africa?", "How long does it usually take to climb it?"] {
                 let started = Date()
                 model.draft = question
@@ -37,8 +40,8 @@ enum AskAICheck {
                     }
                     try? await Task.sleep(for: .milliseconds(50))
                 }
-                lines.append(String(format: "[first text %.1fs, done %.1fs, %d visible updates] Q: %@",
-                                    firstText ?? -1, Date().timeIntervalSince(started), updates, question))
+                lines.append(String(format: "[%@ · %@, first text %.1fs, done %.1fs, %d visible updates] Q: %@",
+                                    model.modelName, model.effort, firstText ?? -1, Date().timeIntervalSince(started), updates, question))
                 if let error = model.errorText {
                     lines.append("ERROR: \(error)")
                     break

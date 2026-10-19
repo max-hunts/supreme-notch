@@ -789,6 +789,75 @@ private struct AskAIView: View {
             }
         }
         .onDisappear { model.endEditing() }
+        .onAppear { model.loadModelsIfNeeded() }
+    }
+
+    /// The model and speed for the next question, as a compact menu beside the field.
+    private var modelMenu: some View {
+        Menu {
+            Section("Model") {
+                ForEach(model.availableModels) { option in
+                    Button {
+                        model.chooseModel(option.id)
+                    } label: {
+                        if option.id == model.modelID {
+                            Label(option.displayName, systemImage: "checkmark")
+                        } else {
+                            Text(option.displayName)
+                        }
+                    }
+                }
+                if model.availableModels.isEmpty {
+                    Text("Loading models…")
+                }
+            }
+            Section("Speed") {
+                ForEach(model.effortsForModel, id: \.self) { effort in
+                    Button {
+                        model.chooseEffort(effort)
+                    } label: {
+                        let title = Self.effortTitle(effort)
+                        if effort == model.effort {
+                            Label(title, systemImage: "checkmark")
+                        } else {
+                            Text(title)
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(verbatim: "\(Self.shortName(model.modelName)) · \(Self.effortTitle(model.effort).components(separatedBy: " ").first ?? "")")
+                    .font(.system(size: 11, weight: .semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .bold))
+            }
+            .foregroundStyle(.white.opacity(0.7))
+            .padding(.horizontal, 9)
+            .frame(height: 28)
+            .background(Color.white.opacity(0.08), in: Capsule())
+            .contentShape(Capsule())
+        }
+        .menuStyle(.button)
+        .buttonStyle(.plain)
+        .menuIndicator(.hidden)
+        .fixedSize()
+        .help("Model and speed for the next question")
+    }
+
+    /// "GPT-6-Luna" reads as "Luna" in the chip; the menu keeps the full name.
+    private static func shortName(_ name: String) -> String {
+        name.components(separatedBy: "-").last.map { $0.isEmpty ? name : $0 } ?? name
+    }
+
+    private static func effortTitle(_ effort: String) -> String {
+        switch effort {
+        case "low": return "Fast (low reasoning)"
+        case "medium": return "Balanced (medium reasoning)"
+        case "high": return "Thorough (high reasoning)"
+        default: return effort.capitalized
+        }
     }
 
     @ViewBuilder
@@ -910,6 +979,8 @@ private struct AskAIView: View {
                 }
                 .buttonStyle(.plain)
             }
+
+            modelMenu
 
             if model.isRunning {
                 askButton("stop.fill", help: "Stop") { model.stop() }

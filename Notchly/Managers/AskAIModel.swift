@@ -29,8 +29,25 @@ final class AskAIModel: ObservableObject {
     @Published private(set) var errorText: String?
     @Published private(set) var isEditing = false
 
+    /// A model Codex offers, as `model/list` describes it.
+    nonisolated struct ModelOption: Identifiable, Equatable, Codable, Sendable {
+        let id: String
+        let displayName: String
+        let efforts: [String]
+    }
+
+    /// Codex's models, cached so the menu has them before Codex starts.
+    @Published private(set) var availableModels: [ModelOption]
+    /// The chosen model; nil picks the newest fast model.
+    @Published private(set) var chosenModelID: String?
+    @Published private(set) var effort: String
+
+    /// Reasoning efforts offered in the menu, fastest first.
+    static let menuEfforts = ["low", "medium", "high"]
+
     private var server: CodexAppServer?
     private var threadID: String?
+    private var isStartingThread = false
     /// A question waiting for the server to finish starting.
     private var queuedQuestion: String?
     private var nextRequestID = 100
@@ -55,6 +72,52 @@ final class AskAIModel: ObservableObject {
     init() {
         // Writing to an app-server that has just quit must not end BetterNotch.
         signal(SIGPIPE, SIG_IGN)
+        let defaults = UserDefaults.standard
+        availableModels = defaults.data(forKey: "askAIModels")
+            .flatMap { try? JSONDecoder().decode([ModelOption].self, from: $0) } ?? []
+        chosenModelID = defaults.string(forKey: "askAIModel")
+        effort = defaults.string(forKey: "askAIEffort") ?? "low"
+    }
+
+    // MARK: Model and speed
+
+    /// The model the next question uses: the chosen one while Codex still offers it,
+    /// else the newest model Codex calls fast ("Luna"), else Codex's own default.
+    var modelID: String? {
+        if let chosenModelID, availableModels.isEmpty || availableModels.contains(where: { $0.id == chosenModelID }) {
+            return chosenModelID
+        }
+        return availableModels.first { $0.id.localizedCaseInsensitiveContains("luna") }?.id
+    }
+
+    var modelName: String {
+        guard let modelID else { return "Codex default" }
+        return availableModels.first { $0.id == modelID }?.displayName ?? modelID
+    }
+
+    func chooseModel(_ id: String) {
+        chosenModelID = id
+        UserDefaults.standard.set(id, forKey: "askAIModel")
+        if let model = availableModels.first(where: { $0.id == id }), !model.efforts.contains(effort) {
+            chooseEffort(model.efforts.first ?? "low")
+        }
+    }
+
+    func chooseEffort(_ effort: String) {
+        self.effort = effort
+        UserDefaults.standard.set(effort, forKey: "askAIEffort")
+    }
+
+    /// Efforts the current model supports, from the menu's set.
+    var effortsForModel: [String] {
+        guard let modelID, let model = availableModels.first(where: { $0.id == modelID }) else { return Self.menuEfforts }
+        return Self.menuEfforts.filter(model.efforts.contains)
+    }
+
+    /// Starts Codex just to learn its models when the menu has none yet.
+    func loadModelsIfNeeded() {
+        guard availableModels.isEmpty, server == nil else { return }
+        startServer()
     }
 
     var hasConversation: Bool { !messages.isEmpty || isRunning || errorText != nil }
@@ -69,6 +132,8 @@ final class AskAIModel: ObservableObject {
         guard !isEditing else { return }
         isEditing = true
         IslandKeyFocus.begin()
+        // Start Codex while you type, so the first answer does not wait for it.
+        if server == nil { startServer() }
         resignObserver = NotificationCenter.default.addObserver(
             forName: NSWindow.didResignKeyNotification,
             object: IslandKeyFocus.islandWindow,
@@ -107,6 +172,10 @@ final class AskAIModel: ObservableObject {
 
         if let server, server.isRunning, let threadID {
             startTurn(text, threadID: threadID, on: server)
+        } else if let server, server.isRunning {
+            // Still starting: the question goes out as soon as the thread is ready.
+            queuedQuestion = text
+            if isReady { startThread(on: server) }
         } else {
             queuedQuestion = text
             startServer()
@@ -131,6 +200,9 @@ final class AskAIModel: ObservableObject {
 
     // MARK: App-server
 
+    /// True once Codex has answered `initialize`.
+    private var isReady = false
+
     private func startServer() {
         let pending = queuedQuestion
         shutDown()
@@ -145,6 +217,8 @@ final class AskAIModel: ObservableObject {
             guard let self, let server, self.server === server else { return }
             self.server = nil
             self.threadID = nil
+            self.isReady = false
+            self.isStartingThread = false
             if self.isRunning { self.finish(error: "Codex stopped unexpectedly.") }
         }
         do {
@@ -160,12 +234,30 @@ final class AskAIModel: ObservableObject {
         ]])
     }
 
+    private func startThread(on server: CodexAppServer) {
+        guard !isStartingThread else { return }
+        isStartingThread = true
+        var params: [String: Any] = [
+            "cwd": Self.workingDirectory.path,
+            "sandbox": "read-only",
+            "approvalPolicy": "never",
+            "ephemeral": true,
+            "developerInstructions": Self.instructions
+        ]
+        if let modelID { params["model"] = modelID }
+        server.send(["id": 2, "method": "thread/start", "params": params])
+    }
+
     private func startTurn(_ text: String, threadID: String, on server: CodexAppServer) {
         nextRequestID += 1
-        server.send(["id": nextRequestID, "method": "turn/start", "params": [
+        // The model and speed apply per question, so a change takes effect at once.
+        var params: [String: Any] = [
             "threadId": threadID,
             "input": [["type": "text", "text": text, "text_elements": [Any]()]]
-        ]])
+        ]
+        if let modelID { params["model"] = modelID }
+        if effortsForModel.contains(effort) { params["effort"] = effort }
+        server.send(["id": nextRequestID, "method": "turn/start", "params": params])
     }
 
     private func handle(_ line: Data) {
@@ -179,23 +271,41 @@ final class AskAIModel: ObservableObject {
             return
         }
         if id != nil, let error = message["error"] as? [String: Any] {
+            if id == 2 { isStartingThread = false }
+            if id == 3 { return }
             if isRunning {
                 finish(error: Self.friendly(error["message"] as? String ?? "Codex returned an error."))
             }
             return
         }
         if id == 1 {
-            server?.send(["method": "initialized"])
-            server?.send(["id": 2, "method": "thread/start", "params": [
-                "cwd": Self.workingDirectory.path,
-                "sandbox": "read-only",
-                "approvalPolicy": "never",
-                "ephemeral": true,
-                "developerInstructions": Self.instructions
-            ]])
+            guard let server else { return }
+            isReady = true
+            server.send(["method": "initialized"])
+            server.send(["id": 3, "method": "model/list", "params": [String: Any]()])
+            // A thread is cheap; having it ready makes the first answer quicker.
+            startThread(on: server)
+            return
+        }
+        if id == 3 {
+            let result = message["result"] as? [String: Any]
+            let list = result?["data"] as? [[String: Any]] ?? []
+            let models = list.compactMap { model -> ModelOption? in
+                guard model["hidden"] as? Bool != true, let id = model["id"] as? String else { return nil }
+                let efforts = (model["supportedReasoningEfforts"] as? [[String: Any]] ?? [])
+                    .compactMap { $0["reasoningEffort"] as? String }
+                return ModelOption(id: id, displayName: model["displayName"] as? String ?? id, efforts: efforts)
+            }
+            if !models.isEmpty {
+                availableModels = models
+                if let data = try? JSONEncoder().encode(models) {
+                    UserDefaults.standard.set(data, forKey: "askAIModels")
+                }
+            }
             return
         }
         if id == 2 {
+            isStartingThread = false
             guard let result = message["result"] as? [String: Any],
                   let thread = result["thread"] as? [String: Any],
                   let threadID = thread["id"] as? String, let server else {
@@ -206,6 +316,8 @@ final class AskAIModel: ObservableObject {
             if let queuedQuestion {
                 self.queuedQuestion = nil
                 startTurn(queuedQuestion, threadID: threadID, on: server)
+            } else if !isRunning {
+                scheduleIdleShutdown()
             }
             return
         }
@@ -279,6 +391,8 @@ final class AskAIModel: ObservableObject {
         let server = self.server
         self.server = nil
         threadID = nil
+        isReady = false
+        isStartingThread = false
         queuedQuestion = nil
         server?.stop()
     }
