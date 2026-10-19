@@ -46,7 +46,7 @@ Colors follow how much is used. Claude's run cold to hot, from blue through cyan
   <img src="docs/images/usage-bar-styles.png" width="560" alt="The two usage bar styles in settings: Color hangs, where what's left is a colored capsule, and Gray rises, where what's used is a gray capsule">
 </p>
 
-Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom.
+Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom. The same page chooses which limits get a bar beside the camera (5-hour, weekly, Fable weekly, Codex weekly); the Usage tab always shows them all.
 
 ## Opened notch
 
@@ -91,6 +91,8 @@ The top shows a large status ring with the battery percentage, plus a mic mute b
 </p>
 
 The Ask tab answers with ChatGPT's models on your **ChatGPT subscription**, with no API key and no API billing. It talks to the Codex that comes with the ChatGPT app, so sign in to Codex in the ChatGPT app once. Answers count toward your Codex usage limits.
+
+The menu beside the field picks the model and speed. It lists every model Codex offers you and defaults to the fast Luna model at low reasoning, where a follow-up starts answering in about a second.
 
 Each conversation is a bare chat: Codex runs in an empty private folder, read-only, with your MCP servers, plugins and hooks switched off, and the conversation is not saved to Codex's history. Turn the tab off in **Settings → General → Ask AI**.
 
