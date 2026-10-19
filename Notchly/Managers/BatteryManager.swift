@@ -34,10 +34,17 @@ final class BatteryManager: ObservableObject {
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            MainActor.assumeIsolated {
-                self?.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
-            }
+            MainActor.assumeIsolated { self?.refreshLowPowerMode() }
         }
+        // The first reading after launch can be wrong; check again once it has settled.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.refreshLowPowerMode()
+        }
+    }
+
+    private func refreshLowPowerMode() {
+        let enabled = ProcessInfo.processInfo.isLowPowerModeEnabled
+        if isLowPowerMode != enabled { isLowPowerMode = enabled }
     }
 
     deinit {
@@ -106,6 +113,7 @@ final class BatteryManager: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             let nextIsCharging = charging || powerSourceState == kIOPSACPowerValue
+            self.refreshLowPowerMode()
 
             if self.batteryLevel != percent {
                 self.batteryLevel = percent

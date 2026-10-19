@@ -19,6 +19,7 @@ struct ExpandedBatteryView: View {
     let size: CGSize
     /// A control at the right edge, such as the mic button.
     var accessory: AnyView? = nil
+    var isLowPowerMode = false
 
     var body: some View {
         VStack(spacing: 5) {
@@ -29,12 +30,19 @@ struct ExpandedBatteryView: View {
                 network: network,
                 volume: volume,
                 isMuted: isVolumeMuted,
-                height: 58
+                height: 58,
+                isLowPowerMode: isLowPowerMode
             )
 
+            // The percentage takes the ring's color when it has one.
             Text("\(batteryLevel)%")
                 .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(.white.opacity(0.7))
+                .foregroundStyle(StatusRingGlyph.stateColor(
+                    isCharging: isCharging,
+                    batteryLevel: batteryLevel,
+                    lowBatteryThreshold: lowBatteryThreshold,
+                    isLowPowerMode: isLowPowerMode
+                ) ?? .white.opacity(0.7))
         }
         .frame(maxWidth: .infinity)
         .overlay(alignment: .trailing) {

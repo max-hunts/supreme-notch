@@ -24,6 +24,7 @@ struct CompactBatteryView: View {
     var usageBars: [UsageBar] = []
     var usageBarStyle: UsageBarStyle = .colorHangs
     var cameraHousingInset: CGFloat = Self.defaultCameraHousingInset
+    var isLowPowerMode = false
 
     static let verticalInset: CGFloat = 2.5
     /// How far inside the notch edges macOS reports the camera housing really ends, on
@@ -125,7 +126,8 @@ struct CompactBatteryView: View {
                 network: network,
                 volume: volume,
                 isMuted: isVolumeMuted,
-                height: Self.glyphHeight(closedHeight: size.height)
+                height: Self.glyphHeight(closedHeight: size.height),
+                isLowPowerMode: isLowPowerMode
             )
         }
         .padding(.trailing, Self.ringOuterInset(closedHeight: size.height))

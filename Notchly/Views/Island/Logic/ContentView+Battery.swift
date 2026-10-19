@@ -59,7 +59,8 @@ extension ContentView {
                     micMuted: closedMicMuted,
                     usageBars: closedUsageBars,
                     usageBarStyle: settingsManager.usageBarStyle,
-                    cameraHousingInset: cameraHousingInset
+                    cameraHousingInset: cameraHousingInset,
+                    isLowPowerMode: batteryManager.isLowPowerMode
                 )
                 .opacity(tucksWings ? 0 : 1)
                 .scaleEffect(x: tucksWings ? 0.6 : 1, y: tucksWings ? 0.85 : 1, anchor: .center)
@@ -97,7 +98,8 @@ extension ContentView {
                     volume: musicManager.outputVolume,
                     isVolumeMuted: musicManager.isOutputMuted,
                     size: layout.batteryPanelSize,
-                    accessory: micButtonAccessory
+                    accessory: micButtonAccessory,
+                    isLowPowerMode: batteryManager.isLowPowerMode
                 )
                 .offset(y: 20)
                 .transition(ExtrasPanelView.openedContentTransition)

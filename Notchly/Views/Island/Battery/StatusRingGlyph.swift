@@ -21,6 +21,8 @@ struct StatusRingGlyph: View {
     let isMuted: Bool
     /// Height of the drawn ring and dots; the glyph scales to fill it exactly.
     var height: CGFloat = 22
+    /// From BatteryManager, which keeps it current; macOS can misreport it right after launch.
+    var isLowPowerMode = false
 
     /// The ring top and the lowest dot edge, in 32 pt canvas units. The drawing sits
     /// above the canvas center, so it is shifted down to center what is actually drawn.
@@ -53,13 +55,22 @@ struct StatusRingGlyph: View {
         CGFloat(min(max(Double(batteryLevel) / 100, 0), 1))
     }
 
-    private var isLow: Bool { !isCharging && batteryLevel <= lowBatteryThreshold }
-
     private var ringColor: Color {
+        Self.stateColor(
+            isCharging: isCharging,
+            batteryLevel: batteryLevel,
+            lowBatteryThreshold: lowBatteryThreshold,
+            isLowPowerMode: isLowPowerMode
+        ) ?? .white
+    }
+
+    /// The battery's state color, or nil for the plain white ring: green on power, red
+    /// at or under the low threshold on battery, yellow in Low Power Mode otherwise.
+    static func stateColor(isCharging: Bool, batteryLevel: Int, lowBatteryThreshold: Int, isLowPowerMode: Bool) -> Color? {
         if isCharging { return Color(nsColor: .systemGreen) }
-        if isLow { return Color(nsColor: .systemRed) }
-        if ProcessInfo.processInfo.isLowPowerModeEnabled { return Color(nsColor: .systemYellow) }
-        return .white
+        if batteryLevel <= lowBatteryThreshold { return Color(nsColor: .systemRed) }
+        if isLowPowerMode { return Color(nsColor: .systemYellow) }
+        return nil
     }
 
     var body: some View {
