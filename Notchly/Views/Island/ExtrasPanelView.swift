@@ -16,7 +16,7 @@ import SwiftUI
 @MainActor
 final class ExtrasPanelModel: ObservableObject {
     enum Tab: String, CaseIterable, Identifiable {
-        case agents, usage, ports, system, shelf, note, ask, output
+        case agents, usage, ask, ports, system, shelf, note, output
         var id: String { rawValue }
 
         var title: String {
@@ -117,11 +117,11 @@ final class ExtrasPanelModel: ObservableObject {
         var tabs: [Tab] = []
         if settings.showAgentSessions { tabs.append(.agents) }
         if settings.showUsageTab { tabs.append(.usage) }
+        if settings.showAskAI { tabs.append(.ask) }
         if settings.showPortsPanel { tabs.append(.ports) }
         if settings.showSystemTab { tabs.append(.system) }
         if settings.showFileShelf { tabs.append(.shelf) }
         if settings.showQuickNote { tabs.append(.note) }
-        if settings.showAskAI { tabs.append(.ask) }
         if settings.showOutputPicker { tabs.append(.output) }
         return tabs
     }
@@ -805,13 +805,14 @@ private struct AskAIView: View {
 
     private var messageList: some View {
         VStack(alignment: .leading, spacing: 5) {
-            ForEach(model.messages) { message in
+            // An answer appears once its first words arrive.
+            ForEach(model.messages.filter { !($0.role == .assistant && $0.text.isEmpty) }) { message in
                 messageView(message)
                     // A question sits closer to its answer than to the answer before it.
                     .padding(.top, message.role == .user && message.id != model.messages.first?.id ? 9 : 0)
                     .id(message.id)
             }
-            if model.isRunning {
+            if model.isRunning && model.messages.last?.text.isEmpty != false {
                 HStack(spacing: 6) {
                     ProgressView().controlSize(.mini).tint(.white)
                     Text("Thinking…")
@@ -825,6 +826,7 @@ private struct AskAIView: View {
                     .foregroundStyle(Color(red: 1.0, green: 0.55, blue: 0.5))
                     .id("status")
             }
+            Color.clear.frame(height: 1).id("end")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 2)
@@ -838,17 +840,17 @@ private struct AskAIView: View {
             .frame(height: ExtrasPanelView.askConversationHeight)
             .onChange(of: model.messages.count) { _, _ in scrollToEnd(proxy) }
             .onChange(of: model.isRunning) { _, _ in scrollToEnd(proxy) }
+            // Follow the answer as it streams in.
+            .onChange(of: model.messages.last?.text) { _, _ in
+                if model.isRunning { proxy.scrollTo("end", anchor: .bottom) }
+            }
             .onAppear { scrollToEnd(proxy) }
         }
     }
 
     private func scrollToEnd(_ proxy: ScrollViewProxy) {
         withAnimation(.easeOut(duration: 0.2)) {
-            if model.isRunning || model.errorText != nil {
-                proxy.scrollTo("status", anchor: .bottom)
-            } else if let last = model.messages.last {
-                proxy.scrollTo(last.id, anchor: .top)
-            }
+            proxy.scrollTo("end", anchor: .bottom)
         }
     }
 

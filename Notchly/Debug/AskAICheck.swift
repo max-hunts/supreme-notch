@@ -25,8 +25,20 @@ enum AskAICheck {
                 let started = Date()
                 model.draft = question
                 model.send()
-                while model.isRunning { try? await Task.sleep(for: .milliseconds(200)) }
-                lines.append(String(format: "[%.1fs] Q: %@", Date().timeIntervalSince(started), question))
+                var firstText: TimeInterval?
+                var updates = 0
+                var lastLength = 0
+                while model.isRunning {
+                    let length = model.messages.last?.text.count ?? 0
+                    if length > lastLength {
+                        updates += 1
+                        lastLength = length
+                        if firstText == nil { firstText = Date().timeIntervalSince(started) }
+                    }
+                    try? await Task.sleep(for: .milliseconds(50))
+                }
+                lines.append(String(format: "[first text %.1fs, done %.1fs, %d visible updates] Q: %@",
+                                    firstText ?? -1, Date().timeIntervalSince(started), updates, question))
                 if let error = model.errorText {
                     lines.append("ERROR: \(error)")
                     break

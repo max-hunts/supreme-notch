@@ -3,10 +3,11 @@
 //  BetterNotch
 //
 //  The Ask tab: a quick question-and-answer chat with ChatGPT's models on your ChatGPT
-//  subscription, through the Codex command-line tool that ships with the ChatGPT app.
-//  No API key and no API billing. Each question runs Codex as a bare chat: in an empty
-//  private folder, read-only, with no MCP servers, plugins or hooks, and nothing saved to
-//  Codex's history. Follow-ups continue the conversation by sending it along each time.
+//  subscription, through the Codex that ships with the ChatGPT app. No API key and no API
+//  billing. A Codex app-server runs while you chat and streams each answer as it is
+//  written. It is a bare chat: an empty private folder, read-only, no approvals, with no
+//  MCP servers, plugins or hooks, and a temporary thread that is not saved to Codex's
+//  history. Follow-ups continue the same thread.
 //
 
 import AppKit
@@ -19,7 +20,7 @@ final class AskAIModel: ObservableObject {
         enum Role: Sendable { case user, assistant }
         let id = UUID()
         let role: Role
-        let text: String
+        var text: String
     }
 
     @Published private(set) var messages: [Message] = []
@@ -28,15 +29,39 @@ final class AskAIModel: ObservableObject {
     @Published private(set) var errorText: String?
     @Published private(set) var isEditing = false
 
-    private var process: Process?
+    private var server: CodexAppServer?
+    private var threadID: String?
+    /// A question waiting for the server to finish starting.
+    private var queuedQuestion: String?
+    private var nextRequestID = 100
+    private var timeoutTask: Task<Void, Never>?
+    private var idleTask: Task<Void, Never>?
     private var resignObserver: NSObjectProtocol?
 
     /// Gives up on an answer after this long.
-    static let timeout: TimeInterval = 90
-    /// How much earlier conversation goes along with a follow-up.
+    static let timeout: Duration = .seconds(90)
+    /// The app-server quits after this long without a question.
+    static let idleLimit: Duration = .seconds(600)
+    /// How much earlier conversation a new thread is given when the old one has gone.
     static let historyLimit = 12
 
+    static let instructions = """
+    You are answering quick questions typed into a small panel in the Mac menu bar. \
+    Reply directly and briefly, in American English. Use plain sentences, with a short list \
+    only when it helps. Do not run commands, read files or use any tools; answer from what \
+    you know, and say so when you are not sure.
+    """
+
+    init() {
+        // Writing to an app-server that has just quit must not end BetterNotch.
+        signal(SIGPIPE, SIG_IGN)
+    }
+
     var hasConversation: Bool { !messages.isEmpty || isRunning || errorText != nil }
+
+    var lastAnswer: String? {
+        messages.last { $0.role == .assistant && !$0.text.isEmpty }?.text
+    }
 
     // MARK: Typing
 
@@ -69,60 +94,196 @@ final class AskAIModel: ObservableObject {
     func send() {
         let question = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !isRunning else { return }
-        guard let codex = Self.codexURL() else {
-            errorText = "Codex was not found. Install the ChatGPT app and sign in to Codex once."
-            return
-        }
-        let prompt = Self.prompt(question: question, history: messages)
-        messages.append(Message(role: .user, text: question))
-        draft = ""
         errorText = nil
-        isRunning = true
 
-        let process = Self.makeProcess(codex: codex, prompt: prompt, folder: Self.workingDirectory)
-        self.process = process
-        Task.detached { [weak self] in
-            let result = Self.run(process)
-            await MainActor.run {
-                guard let self, self.process === process else { return }
-                self.process = nil
-                self.isRunning = false
-                switch result {
-                case let .success(answer):
-                    self.messages.append(Message(role: .assistant, text: answer))
-                case let .failure(error):
-                    self.errorText = error.message
-                }
-            }
+        // A new thread only knows what it is told, so it gets the earlier exchange.
+        let text = threadID == nil ? Self.prompt(question: question, history: messages) : question
+        messages.append(Message(role: .user, text: question))
+        messages.append(Message(role: .assistant, text: ""))
+        draft = ""
+        isRunning = true
+        idleTask?.cancel()
+        startTimeout()
+
+        if let server, server.isRunning, let threadID {
+            startTurn(text, threadID: threadID, on: server)
+        } else {
+            queuedQuestion = text
+            startServer()
         }
     }
 
+    /// Ends the answer in progress. The server goes with it; the next question starts a
+    /// new thread that is given the conversation so far.
     func stop() {
-        guard let process else { return }
-        self.process = nil
-        if process.isRunning { process.terminate() }
-        isRunning = false
-        errorText = "Stopped."
+        guard isRunning else { return }
+        shutDown()
+        finish(error: "Stopped.")
     }
 
     func clear() {
-        stop()
+        shutDown()
+        timeoutTask?.cancel()
+        isRunning = false
         messages.removeAll()
         errorText = nil
     }
 
-    #if DEBUG
-    /// Sample conversation for render checks.
-    func previewLoad(_ exchange: [(question: String, answer: String)]) {
-        messages = exchange.flatMap { [Message(role: .user, text: $0.question), Message(role: .assistant, text: $0.answer)] }
-    }
-    #endif
+    // MARK: App-server
 
-    var lastAnswer: String? {
-        messages.last { $0.role == .assistant }?.text
+    private func startServer() {
+        let pending = queuedQuestion
+        shutDown()
+        queuedQuestion = pending
+        guard let codex = Self.codexURL() else {
+            finish(error: "Codex was not found. Install the ChatGPT app and sign in to Codex once.")
+            return
+        }
+        let server = CodexAppServer(codex: codex, folder: Self.workingDirectory)
+        server.onLine = { [weak self] line in self?.handle(line) }
+        server.onExit = { [weak self, weak server] in
+            guard let self, let server, self.server === server else { return }
+            self.server = nil
+            self.threadID = nil
+            if self.isRunning { self.finish(error: "Codex stopped unexpectedly.") }
+        }
+        do {
+            try server.start()
+        } catch {
+            finish(error: "Could not start Codex: \(error.localizedDescription)")
+            return
+        }
+        self.server = server
+        server.send(["id": 1, "method": "initialize", "params": [
+            "clientInfo": ["name": "betternotch", "title": "BetterNotch", "version": Self.appVersion],
+            "capabilities": NSNull()
+        ]])
     }
 
-    // MARK: Codex
+    private func startTurn(_ text: String, threadID: String, on server: CodexAppServer) {
+        nextRequestID += 1
+        server.send(["id": nextRequestID, "method": "turn/start", "params": [
+            "threadId": threadID,
+            "input": [["type": "text", "text": text, "text_elements": [Any]()]]
+        ]])
+    }
+
+    private func handle(_ line: Data) {
+        guard let message = try? JSONSerialization.jsonObject(with: line) as? [String: Any] else { return }
+        let id = message["id"] as? Int
+        let method = message["method"] as? String
+
+        // A request from Codex, such as an approval. This chat allows nothing.
+        if let id, method != nil {
+            server?.send(["id": id, "error": ["code": -32601, "message": "Not available in this chat"]])
+            return
+        }
+        if id != nil, let error = message["error"] as? [String: Any] {
+            if isRunning {
+                finish(error: Self.friendly(error["message"] as? String ?? "Codex returned an error."))
+            }
+            return
+        }
+        if id == 1 {
+            server?.send(["method": "initialized"])
+            server?.send(["id": 2, "method": "thread/start", "params": [
+                "cwd": Self.workingDirectory.path,
+                "sandbox": "read-only",
+                "approvalPolicy": "never",
+                "ephemeral": true,
+                "developerInstructions": Self.instructions
+            ]])
+            return
+        }
+        if id == 2 {
+            guard let result = message["result"] as? [String: Any],
+                  let thread = result["thread"] as? [String: Any],
+                  let threadID = thread["id"] as? String, let server else {
+                finish(error: "Codex did not start a conversation.")
+                return
+            }
+            self.threadID = threadID
+            if let queuedQuestion {
+                self.queuedQuestion = nil
+                startTurn(queuedQuestion, threadID: threadID, on: server)
+            }
+            return
+        }
+
+        let params = message["params"] as? [String: Any] ?? [:]
+        switch method {
+        case "item/agentMessage/delta":
+            guard isRunning, let delta = params["delta"] as? String,
+                  messages.last?.role == .assistant else { return }
+            messages[messages.count - 1].text += delta
+        case "error":
+            let error = params["error"] as? [String: Any]
+            if isRunning, params["willRetry"] as? Bool != true {
+                finish(error: Self.friendly(error?["message"] as? String ?? "Codex returned an error."))
+            }
+        case "turn/completed":
+            guard isRunning else { return }
+            let turn = params["turn"] as? [String: Any]
+            let status = turn?["status"] as? String
+            let turnError = (turn?["error"] as? [String: Any])?["message"] as? String
+            if status == "failed" || lastAnswerIsEmpty {
+                finish(error: Self.friendly(turnError ?? "No answer came back."))
+            } else {
+                finish(error: nil)
+            }
+        default:
+            break
+        }
+    }
+
+    private var lastAnswerIsEmpty: Bool {
+        messages.last.map { $0.role == .assistant && $0.text.isEmpty } ?? true
+    }
+
+    private func finish(error: String?) {
+        timeoutTask?.cancel()
+        timeoutTask = nil
+        queuedQuestion = nil
+        if let error {
+            errorText = error
+            // Drop an answer that never started, so the question stands on its own.
+            if lastAnswerIsEmpty, messages.last?.role == .assistant { messages.removeLast() }
+        }
+        isRunning = false
+        scheduleIdleShutdown()
+    }
+
+    private func startTimeout() {
+        timeoutTask?.cancel()
+        timeoutTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.timeout)
+            guard !Task.isCancelled, let self, self.isRunning else { return }
+            self.shutDown()
+            self.finish(error: "No answer within \(Self.timeout.components.seconds) seconds.")
+        }
+    }
+
+    private func scheduleIdleShutdown() {
+        idleTask?.cancel()
+        guard server != nil else { return }
+        idleTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.idleLimit)
+            guard !Task.isCancelled, let self, !self.isRunning else { return }
+            self.shutDown()
+        }
+    }
+
+    private func shutDown() {
+        idleTask?.cancel()
+        idleTask = nil
+        let server = self.server
+        self.server = nil
+        threadID = nil
+        queuedQuestion = nil
+        server?.stop()
+    }
+
+    // MARK: Helpers
 
     /// The Codex inside the ChatGPT app comes first: it matches the app's own login.
     nonisolated static func codexURL() -> URL? {
@@ -145,102 +306,101 @@ final class AskAIModel: ObservableObject {
         return url
     }
 
-    nonisolated static func prompt(question: String, history: [Message]) -> String {
-        var text = """
-        You are answering a quick question typed into a small panel in the Mac menu bar. \
-        Reply directly and briefly, in American English. Use plain sentences, with a short list only when it helps. \
-        Do not run commands, read files or use any tools; answer from what you know, and say \
-        so when you are not sure.
-        """
-        let earlier = history.suffix(historyLimit)
-        if !earlier.isEmpty {
-            text += "\n\nConversation so far:\n"
-            for message in earlier {
-                text += (message.role == .user ? "User: " : "Assistant: ") + message.text + "\n"
-            }
-        }
-        text += "\nQuestion: \(question)"
-        return text
+    private static var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 
-    nonisolated private static func makeProcess(codex: URL, prompt: String, folder: URL) -> Process {
-        let process = Process()
+    nonisolated static func prompt(question: String, history: [Message]) -> String {
+        let earlier = history.suffix(historyLimit).filter { !$0.text.isEmpty }
+        guard !earlier.isEmpty else { return question }
+        var text = "Conversation so far:\n"
+        for message in earlier {
+            text += (message.role == .user ? "User: " : "Assistant: ") + message.text + "\n"
+        }
+        return text + "\nQuestion: \(question)"
+    }
+
+    private static func friendly(_ message: String) -> String {
+        if message.localizedCaseInsensitiveContains("login") || message.localizedCaseInsensitiveContains("auth") {
+            return "Codex is not signed in. Open the ChatGPT app's Codex once, or run codex login."
+        }
+        return String(message.prefix(200))
+    }
+
+    #if DEBUG
+    /// Sample conversation for render checks.
+    func previewLoad(_ exchange: [(question: String, answer: String)]) {
+        messages = exchange.flatMap { [Message(role: .user, text: $0.question), Message(role: .assistant, text: $0.answer)] }
+    }
+    #endif
+}
+
+/// One `codex app-server` process, speaking JSON-RPC as one JSON object per line.
+nonisolated final class CodexAppServer: @unchecked Sendable {
+    private let process = Process()
+    private let input = Pipe()
+    private let output = Pipe()
+    private var buffer = Data()
+    /// Each line Codex prints, delivered on the main queue in order.
+    @MainActor var onLine: ((Data) -> Void)?
+    @MainActor var onExit: (() -> Void)?
+
+    init(codex: URL, folder: URL) {
         process.executableURL = codex
         process.currentDirectoryURL = folder
         process.arguments = [
-            "exec",
-            "--skip-git-repo-check",
-            "--sandbox", "read-only",
-            "--ephemeral",
-            "--json",
-            "--color", "never",
-            "--cd", folder.path,
+            "app-server",
             // A bare chat: none of your MCP servers, plugins, hooks or notifiers.
             "-c", "mcp_servers={}",
             "-c", "features.hooks=false",
             "-c", "features.plugins=false",
             "-c", "notify=[]",
-            "-c", "model_reasoning_effort=low",
-            prompt
+            "-c", "model_reasoning_effort=low"
         ]
-        process.standardInput = FileHandle.nullDevice
-        return process
-    }
-
-    nonisolated struct AskError: Error {
-        let message: String
-    }
-
-    /// Runs Codex and returns its last message. Codex prints one JSON event per line.
-    nonisolated private static func run(_ process: Process) -> Result<String, AskError> {
-        let output = Pipe()
-        let errors = Pipe()
+        process.standardInput = input
         process.standardOutput = output
-        process.standardError = errors
-        do {
-            try process.run()
-        } catch {
-            return .failure(AskError(message: "Could not start Codex: \(error.localizedDescription)"))
-        }
-        let killer = DispatchWorkItem { if process.isRunning { process.terminate() } }
-        DispatchQueue.global().asyncAfter(deadline: .now() + timeout, execute: killer)
+        process.standardError = FileHandle.nullDevice
+    }
 
-        let data = output.fileHandleForReading.readDataToEndOfFile().prefix(2_000_000)
-        let errorText = String(decoding: errors.fileHandleForReading.readDataToEndOfFile().prefix(4000), as: UTF8.self)
-        process.waitUntilExit()
-        killer.cancel()
+    var isRunning: Bool { process.isRunning }
 
-        var answer: String?
-        var failure: String?
-        for line in String(decoding: data, as: UTF8.self).split(separator: "\n") {
-            guard let event = try? JSONSerialization.jsonObject(with: Data(line.utf8)) as? [String: Any],
-                  let type = event["type"] as? String else { continue }
-            switch type {
-            case "item.completed":
-                if let item = event["item"] as? [String: Any], item["type"] as? String == "agent_message",
-                   let text = item["text"] as? String, !text.isEmpty {
-                    answer = text
+    func start() throws {
+        // Only this handler touches the buffer, and it runs on one queue at a time.
+        output.fileHandleForReading.readabilityHandler = { [weak self] handle in
+            let data = handle.availableData
+            guard let self else { return }
+            if data.isEmpty {
+                handle.readabilityHandler = nil
+                return
+            }
+            self.buffer.append(data)
+            while let newline = self.buffer.firstIndex(of: 0x0A) {
+                let line = Data(self.buffer[self.buffer.startIndex..<newline])
+                self.buffer.removeSubrange(self.buffer.startIndex...newline)
+                guard !line.isEmpty else { continue }
+                DispatchQueue.main.async { [weak self] in
+                    MainActor.assumeIsolated { self?.onLine?(line) }
                 }
-            case "turn.failed", "error":
-                let error = (event["error"] as? [String: Any])?["message"] as? String ?? event["message"] as? String
-                failure = error ?? failure
-            default:
-                break
             }
         }
+        process.terminationHandler = { [weak self] _ in
+            DispatchQueue.main.async { [weak self] in
+                MainActor.assumeIsolated { self?.onExit?() }
+            }
+        }
+        try process.run()
+    }
 
-        if let answer { return .success(answer.trimmingCharacters(in: .whitespacesAndNewlines)) }
-        if process.terminationReason == .uncaughtSignal {
-            return .failure(AskError(message: "No answer within \(Int(timeout)) seconds."))
-        }
-        let firstErrorLine = errorText
-            .components(separatedBy: .newlines)
-            .map { $0.trimmingCharacters(in: .whitespaces) }
-            .first { !$0.isEmpty && !$0.hasPrefix("Reading additional input") }
-        let message = failure ?? firstErrorLine ?? "Codex exited with \(process.terminationStatus)."
-        if message.localizedCaseInsensitiveContains("login") || message.localizedCaseInsensitiveContains("auth") {
-            return .failure(AskError(message: "Codex is not signed in. Open the ChatGPT app's Codex once, or run codex login."))
-        }
-        return .failure(AskError(message: String(message.prefix(200))))
+    func send(_ message: [String: Any]) {
+        guard process.isRunning,
+              var data = try? JSONSerialization.data(withJSONObject: message) else { return }
+        data.append(0x0A)
+        try? input.fileHandleForWriting.write(contentsOf: data)
+    }
+
+    func stop() {
+        output.fileHandleForReading.readabilityHandler = nil
+        try? input.fileHandleForWriting.close()
+        if process.isRunning { process.terminate() }
     }
 }
