@@ -69,10 +69,11 @@ struct StatusRingGlyph: View {
                 .stroke(ringColor, style: ringStroke)
                 .frame(width: ringPathDiameter, height: ringPathDiameter)
                 .offset(y: Self.ringYOffset)
-                .opacity(isCharging ? 0.24 : 0)
+                // The ticks stand alone, with nothing showing through their gaps.
+                .opacity(isCharging && !isFullOnPower ? 0.24 : 0)
 
             StatusArcShape(startDegrees: arcStart, endDegrees: arcEnd, progress: progress)
-                .stroke(ringColor, style: ringStroke)
+                .stroke(ringColor, style: isFullOnPower ? fullTickStroke : ringStroke)
                 .frame(width: ringPathDiameter, height: ringPathDiameter)
                 .offset(y: Self.ringYOffset)
 
@@ -117,6 +118,25 @@ struct StatusRingGlyph: View {
 
     private var ringStroke: StrokeStyle {
         StrokeStyle(lineWidth: Self.arcLineWidth, lineCap: .round, lineJoin: .round)
+    }
+
+    /// Plugged in and full: the green ring breaks into fine ticks, so full reads differently
+    /// from still charging.
+    private var isFullOnPower: Bool { isCharging && batteryLevel >= 100 }
+
+    static let fullTickCount = 24
+    /// The share of each tick's step that is drawn; the rest is gap.
+    static let fullTickFill: CGFloat = 0.35
+
+    /// Ticks that start and end exactly on the arc's two ends.
+    private var fullTickStroke: StrokeStyle {
+        let length = ringPathDiameter / 2 * CGFloat((arcEnd - arcStart) * .pi / 180)
+        let step = length / (CGFloat(Self.fullTickCount - 1) + Self.fullTickFill)
+        return StrokeStyle(
+            lineWidth: Self.arcLineWidth * 1.15,
+            lineCap: .butt,
+            dash: [step * Self.fullTickFill, step * (1 - Self.fullTickFill)]
+        )
     }
 
     /// The Wi-Fi fan sits a little higher than the box center, as in DuoBar.

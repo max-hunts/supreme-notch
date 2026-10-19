@@ -13,6 +13,9 @@ import Combine
 final class BatteryManager: ObservableObject {
     @Published var batteryLevel: Int = 0
     @Published var isCharging: Bool = false
+    /// Low Power Mode turns the status ring yellow; publishing it redraws the ring at once.
+    @Published private(set) var isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+    private var lowPowerObserver: NSObjectProtocol?
     @Published var isBatteryAvailable: Bool = true
     @Published var powerSource: String = "Unknown"
 
@@ -26,6 +29,15 @@ final class BatteryManager: ObservableObject {
         updateBatteryInfo()
         startMonitoring()
         startPowerSourceNotifications()
+        lowPowerObserver = NotificationCenter.default.addObserver(
+            forName: .NSProcessInfoPowerStateDidChange,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated {
+                self?.isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+            }
+        }
     }
 
     deinit {
