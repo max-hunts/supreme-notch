@@ -62,7 +62,8 @@ extension ContentView {
                     cameraHousingInset: cameraHousingInset,
                     isLowPowerMode: batteryManager.isLowPowerMode,
                     isChargeOnHold: batteryManager.isChargeOnHold,
-                    chargeHoldStyle: settingsManager.chargeHoldStyle
+                    chargeHoldStyle: settingsManager.chargeHoldStyle,
+                    showsRing: settingsManager.showBattery
                 )
                 .opacity(tucksWings ? 0 : 1)
                 .scaleEffect(x: tucksWings ? 0.6 : 1, y: tucksWings ? 0.85 : 1, anchor: .center)
@@ -103,7 +104,8 @@ extension ContentView {
                     accessory: micButtonAccessory,
                     isLowPowerMode: batteryManager.isLowPowerMode,
                     isChargeOnHold: batteryManager.isChargeOnHold,
-                    chargeHoldStyle: settingsManager.chargeHoldStyle
+                    chargeHoldStyle: settingsManager.chargeHoldStyle,
+                    showsRing: settingsManager.showBattery
                 )
                 .offset(y: 20)
                 .transition(ExtrasPanelView.openedContentTransition)
@@ -143,7 +145,7 @@ extension ContentView {
         .onTapGesture {
             // A click opens the notch. Once open, clicks on empty space do nothing; it
             // closes when the pointer leaves, like the music player.
-            guard settingsManager.showBattery, status != .opened else { return }
+            guard showsBaseIsland, status != .opened else { return }
 
             autoExpandMusicTask?.cancel()
 

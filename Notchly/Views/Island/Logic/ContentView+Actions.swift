@@ -239,7 +239,7 @@ extension ContentView {
         if settingsManager.showMusic && musicManager.hasNowPlayingContent {
             canOpen = true
         } else {
-            canOpen = dynamicManager.currentModule == .battery && settingsManager.showBattery
+            canOpen = dynamicManager.currentModule == .battery && showsBaseIsland
         }
         guard canOpen else { return }
 

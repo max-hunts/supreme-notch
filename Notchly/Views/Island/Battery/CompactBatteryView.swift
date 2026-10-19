@@ -27,6 +27,8 @@ struct CompactBatteryView: View {
     var isLowPowerMode = false
     var isChargeOnHold = false
     var chargeHoldStyle: ChargeHoldStyle = .teal
+    /// False when the battery is turned off; the usage bars and mic stay.
+    var showsRing = true
 
     static let verticalInset: CGFloat = 2.5
     /// How far inside the notch edges macOS reports the camera housing really ends, on
@@ -121,18 +123,20 @@ struct CompactBatteryView: View {
 
             Spacer(minLength: 0)
 
-            StatusRingGlyph(
-                batteryLevel: batteryLevel,
-                isCharging: isCharging,
-                lowBatteryThreshold: lowBatteryThreshold,
-                network: network,
-                volume: volume,
-                isMuted: isVolumeMuted,
-                height: Self.glyphHeight(closedHeight: size.height),
-                isLowPowerMode: isLowPowerMode,
-                isChargeOnHold: isChargeOnHold,
-                chargeHoldStyle: chargeHoldStyle
-            )
+            if showsRing {
+                StatusRingGlyph(
+                    batteryLevel: batteryLevel,
+                    isCharging: isCharging,
+                    lowBatteryThreshold: lowBatteryThreshold,
+                    network: network,
+                    volume: volume,
+                    isMuted: isVolumeMuted,
+                    height: Self.glyphHeight(closedHeight: size.height),
+                    isLowPowerMode: isLowPowerMode,
+                    isChargeOnHold: isChargeOnHold,
+                    chargeHoldStyle: chargeHoldStyle
+                )
+            }
         }
         .padding(.trailing, Self.ringOuterInset(closedHeight: size.height))
         .frame(width: size.width, height: size.height)

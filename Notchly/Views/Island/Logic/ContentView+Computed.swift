@@ -13,7 +13,7 @@ extension ContentView {
     private var nonAgentFallbackView: some View {
         if settingsManager.showMusic && musicManager.hasNowPlayingContent {
             musicContainer
-        } else if settingsManager.showBattery {
+        } else if showsBaseIsland {
             islandContainer
         } else {
             emptyBar
@@ -82,7 +82,7 @@ extension ContentView {
         if usesMusicLayout || dynamicManager.currentModule == .music {
             return settingsManager.showMusic && musicManager.hasNowPlayingContent ? activity : nil
         }
-        return dynamicManager.currentModule == .battery && settingsManager.showBattery ? activity : nil
+        return dynamicManager.currentModule == .battery && showsBaseIsland ? activity : nil
     }
 
     /// The battery wings carry a title, so they widen more than the music badge needs.
@@ -110,8 +110,16 @@ extension ContentView {
         CompactBatteryView.defaultCameraHousingInset - CGFloat(settingsManager.cameraSpacingAdjustment)
     }
 
+    /// The base island, around the camera: the battery ring, the usage bars or the muted
+    /// mic. Turning the battery off hides only the ring.
+    var showsBaseIsland: Bool {
+        settingsManager.showBattery || !closedUsageBars.isEmpty || closedMicMuted
+    }
+
+    /// The ring's wing, right of the camera; none while the battery is turned off.
     var batterySideWingWidth: CGFloat {
-        CompactBatteryView.wingWidth(closedHeight: closedHeight, cameraHousingInset: cameraHousingInset)
+        guard settingsManager.showBattery else { return 0 }
+        return CompactBatteryView.wingWidth(closedHeight: closedHeight, cameraHousingInset: cameraHousingInset)
     }
 
     var closedMicMuted: Bool {
@@ -165,7 +173,7 @@ extension ContentView {
     /// An agent alert grows out of, and shrinks back into, the battery wing when that is
     /// what the closed notch shows around it; otherwise the island would jump in width.
     var agentClosedUsesBatteryWing: Bool {
-        settingsManager.showBattery && closedLiveActivity == nil && !showChargingPop
+        showsBaseIsland && closedLiveActivity == nil && !showChargingPop
             && !(settingsManager.showMusic && musicManager.hasNowPlayingContent)
     }
 
@@ -186,7 +194,7 @@ extension ContentView {
             return true
         case .agent:
             // The battery panel is also the fallback while the module catches up after a glance.
-            return activeAgentEvent == nil && settingsManager.showBattery
+            return activeAgentEvent == nil && showsBaseIsland
         case .music, .none:
             return false
         }
@@ -277,7 +285,7 @@ extension ContentView {
                         nonAgentFallbackView
                     }
                 case .battery:
-                    if settingsManager.showBattery {
+                    if showsBaseIsland {
                         islandContainer
                     } else {
                         emptyBar
@@ -382,7 +390,10 @@ extension ContentView {
             return true
         case .agent:
             return agentEventManager.currentEvent == nil
-        case .battery, .music:
+        case .battery:
+            // Nothing to show around the camera: the plain notch.
+            return !showsBaseIsland
+        case .music:
             return false
         }
     }
@@ -398,7 +409,9 @@ extension ContentView {
         switch dynamicManager.currentModule {
         case .none, .agent:
             return true
-        case .battery, .music:
+        case .battery:
+            return !showsBaseIsland
+        case .music:
             return false
         }
     }

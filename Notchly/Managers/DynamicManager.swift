@@ -77,11 +77,11 @@ final class DynamicManager: ObservableObject {
         } else if settingsManager.showMusic && musicManager.isResolvingNowPlaying {
             // Waiting to learn what is playing. Keep the battery ring if it is already up,
             // so a re-check after wake does not leave an empty, unclickable notch.
-            newModule = currentModule == .battery && settingsManager.showBattery ? .battery : .none
-        } else if settingsManager.showBattery {
-            newModule = .battery
+            newModule = currentModule == .battery ? .battery : .none
         } else {
-            newModule = .none
+            // The base island: the battery ring, usage bars and muted mic. The battery
+            // switch only hides the ring, so the island stays for the rest.
+            newModule = .battery
         }
 
         guard newModule != currentModule else { return }

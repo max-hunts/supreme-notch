@@ -22,6 +22,8 @@ struct ExpandedBatteryView: View {
     var isLowPowerMode = false
     var isChargeOnHold = false
     var chargeHoldStyle: ChargeHoldStyle = .teal
+    /// False when the battery is turned off; the mic button stays.
+    var showsRing = true
 
     private var showsOnHold: Bool { isCharging && isChargeOnHold && batteryLevel < 100 }
 
@@ -37,23 +39,25 @@ struct ExpandedBatteryView: View {
 
     var body: some View {
         VStack(spacing: 5) {
-            StatusRingGlyph(
-                batteryLevel: batteryLevel,
-                isCharging: isCharging,
-                lowBatteryThreshold: lowBatteryThreshold,
-                network: network,
-                volume: volume,
-                isMuted: isVolumeMuted,
-                height: 58,
-                isLowPowerMode: isLowPowerMode,
-                isChargeOnHold: isChargeOnHold,
-                chargeHoldStyle: chargeHoldStyle
-            )
+            if showsRing {
+                StatusRingGlyph(
+                    batteryLevel: batteryLevel,
+                    isCharging: isCharging,
+                    lowBatteryThreshold: lowBatteryThreshold,
+                    network: network,
+                    volume: volume,
+                    isMuted: isVolumeMuted,
+                    height: 58,
+                    isLowPowerMode: isLowPowerMode,
+                    isChargeOnHold: isChargeOnHold,
+                    chargeHoldStyle: chargeHoldStyle
+                )
 
-            // The percentage takes the ring's color when it has one.
-            Text(showsOnHold ? "\(batteryLevel)% · On hold" : "\(batteryLevel)%")
-                .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(labelColor)
+                // The percentage takes the ring's color when it has one.
+                Text(showsOnHold ? "\(batteryLevel)% · On hold" : "\(batteryLevel)%")
+                    .font(.system(size: 12, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(labelColor)
+            }
         }
         .frame(maxWidth: .infinity)
         .overlay(alignment: .trailing) {
