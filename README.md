@@ -28,6 +28,8 @@ The closed notch stays out of the way. The camera sits in the middle, with a sma
 - **Left wing, usage bars.** One short bar for each subscription limit: Claude's 5-hour, weekly and per-model limits, plus Codex. The colored part is what's left, so a fresh limit is a full bar, and it shrinks and warms in color as you use it. They refresh every 5 minutes. **Settings → AI Usage** switches between two bar styles.
 - **Muted mic.** A red slashed mic appears next to the camera whenever your microphone is muted.
 
+Each glyph sits as far from the camera as from the notch's edge. If yours sits too close to the camera or too far from it, **Settings → General → Space Beside Camera** moves both sides in or out, with a Reset button to go back to the default.
+
 <p align="center">
   <img src="docs/images/status-ring.png" width="580" alt="The status ring explained: outer arc is battery, center is network, four dots are volume; with Wi-Fi, weak Wi-Fi, charging, Ethernet and offline with low battery examples">
 </p>
@@ -39,6 +41,12 @@ Charging color changes the moment you plug in or unplug.
 </p>
 
 Colors follow how much is used. Claude's run cold to hot, from blue through cyan, green and amber to red. Codex's run green to red. Any bar at its limit is solid purple.
+
+<p align="center">
+  <img src="docs/images/usage-bar-styles.png" width="560" alt="The two usage bar styles in settings: Color hangs, where what's left is a colored capsule, and Gray rises, where what's used is a gray capsule">
+</p>
+
+Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom.
 
 ## Opened notch
 
@@ -65,6 +73,7 @@ The top shows a large status ring with the battery percentage, plus a mic mute b
 |---|---|
 | Agents | Your running Claude Code and Codex sessions, what each one is doing right now, and a button that opens the exact session in the Claude app. |
 | Usage | Claude and Codex usage bars with reset times. |
+| Ask | Type a quick question and watch the answer stream in from ChatGPT. Follow-ups continue the conversation. |
 | Ports | Local servers listening on your Mac, with the process that owns each port. |
 | System | CPU, memory and disk rings, plus a 5-minute network chart (download and upload). |
 | Shelf | A drop zone for files. Drag a file toward the notch and it opens itself; drag files back out with their names intact. |
@@ -75,6 +84,16 @@ The top shows a large status ring with the battery percentage, plus a mic mute b
   <img src="docs/images/tab-output.png" width="400" alt="Output tab: built-in speakers, AirPods Pro and Studio Display, with AirPods selected">
 </p>
 
+### Ask
+
+<p align="center">
+  <img src="docs/images/tab-ask.png" width="440" alt="Ask tab: a question about Mount Kilimanjaro, its answer, a follow-up about how long the climb takes and its answer, above a field to ask a follow-up">
+</p>
+
+The Ask tab answers with ChatGPT's models on your **ChatGPT subscription**, with no API key and no API billing. It talks to the Codex that comes with the ChatGPT app, so sign in to Codex in the ChatGPT app once. Answers count toward your Codex usage limits.
+
+Each conversation is a bare chat: Codex runs in an empty private folder, read-only, with your MCP servers, plugins and hooks switched off, and the conversation is not saved to Codex's history. Turn the tab off in **Settings → General → Ask AI**.
+
 ## Agent alerts
 
 BetterNotch installs small hooks into Claude Code, Codex and Cursor, and shows their events in the notch:
@@ -82,6 +101,7 @@ BetterNotch installs small hooks into Claude Code, Codex and Cursor, and shows t
 - **Approvals.** Approve or deny a tool request from the notch, or hand it back to the agent's own prompt.
 - **Questions.** When an agent asks you a question, the notch shows it with an Open session button. Questions never get an Approve button.
 - **Finished turns.** A short summary of what the agent did, with Open session.
+- **Browser actions.** The Claude app asks before Claude clicks or types on a new site, and that prompt does not reach hooks. When a browser action has been waiting for 4 seconds, the notch says Claude may need you.
 - **No interruptions.** Alerts wait while you are using the opened notch, and every alert has an X to dismiss it.
 
 <p align="center">
@@ -117,7 +137,7 @@ Automatic updates are turned off in this fork for now, so install new releases b
 
 ## Privacy
 
-Everything runs on your Mac. There is no analytics or telemetry. The only network calls are the ones you turn on: the usage monitor asks Claude and OpenAI for your own usage, and the internet check pings `www.apple.com`. Agent hooks write to a local folder that only this app reads.
+Everything runs on your Mac. There is no analytics or telemetry. The only network calls are the ones you turn on: the usage monitor asks Claude and OpenAI for your own usage, the Ask tab sends your questions to OpenAI through Codex when you ask one, and the internet check pings `www.apple.com`. Agent hooks write to a local folder that only this app reads.
 
 ## Build from source
 

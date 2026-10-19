@@ -794,9 +794,9 @@ private struct AskAIView: View {
     @ViewBuilder
     private var conversation: some View {
         if SnapshotRendering.isActive {
-            // Offscreen renders cannot draw a scroll view; show the end of the conversation.
+            // Offscreen renders cannot draw a scroll view; lay the messages out as the app does.
             messageList
-                .frame(height: ExtrasPanelView.askConversationHeight, alignment: .bottom)
+                .frame(height: ExtrasPanelView.askConversationHeight, alignment: .top)
                 .clipped()
         } else {
             scrollingConversation

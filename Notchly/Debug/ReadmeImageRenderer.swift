@@ -37,7 +37,7 @@ enum ReadmeImageRenderer {
         save(Backdrop { OpenedIsland(environment: environment, tab: .agents) }, as: "check-row-highlights.png", in: directory)
         SnapshotRendering.showsRowHighlights = false
 
-        // Ask tab checks, empty and with a conversation; not used in the README.
+        // The Ask tab, empty (a check) and with a conversation (in the README).
         environment.settingsManager.showAskAI = true
         environment.extrasPanelModel.choose(.ask)
         save(Backdrop { OpenedIsland(environment: environment, tab: .ask) }, as: "check-ask-empty.png", in: directory)
@@ -45,7 +45,7 @@ enum ReadmeImageRenderer {
             ("What is the tallest mountain in Africa?", "Mount Kilimanjaro in Tanzania, at **5,895 m** (19,341 ft) above sea level."),
             ("How long does it usually take to climb it?", "Most climbs take **5 to 9 days** including the descent. Longer routes, like the 8-day Lemosho, give you more time to acclimatize and raise your chance of reaching the summit.")
         ])
-        save(Backdrop { OpenedIsland(environment: environment, tab: .ask) }, as: "check-ask-tab.png", in: directory)
+        save(Backdrop { OpenedIsland(environment: environment, tab: .ask) }, as: "tab-ask.png", in: directory)
         environment.extrasPanelModel.askAI.clear()
 
         // Settings check: the usage bar style picker, not used in the README.
