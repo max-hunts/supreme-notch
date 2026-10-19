@@ -118,11 +118,14 @@ extension ContentView {
         settingsManager.showMicMute && micMuteManager.isMuted
     }
 
-    /// Subscription usage for the closed notch: Claude's limits, then Codex.
+    /// Subscription usage for the closed notch: Claude's limits, then Codex, leaving out
+    /// any turned off in Settings > AI Usage.
     var closedUsageBars: [UsageBar] {
         guard settingsManager.showUsageTab, case let .loaded(snapshot) = aiUsageMonitor.state else { return [] }
-        var bars = snapshot.claude.map { UsageBar(id: $0.label, percent: $0.percent, scale: .claude) }
-        if let codex = snapshot.codex {
+        var bars = snapshot.claude
+            .filter { settingsManager.showsUsageBar($0.kind) }
+            .map { UsageBar(id: $0.label, percent: $0.percent, scale: .claude) }
+        if let codex = snapshot.codex, settingsManager.showsUsageBar(.codexWeekly) {
             bars.append(UsageBar(id: codex.label, percent: codex.percent, scale: .codex))
         }
         return bars

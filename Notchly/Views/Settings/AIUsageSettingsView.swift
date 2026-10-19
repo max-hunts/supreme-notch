@@ -32,6 +32,14 @@ struct AIUsageSettingsView: View {
 
                     SettingsDivider()
 
+                    UsageBarChoices(settingsManager: settingsManager)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
+                        .disabled(!settingsManager.showUsageTab)
+                        .opacity(settingsManager.showUsageTab ? 1 : 0.45)
+
+                    SettingsDivider()
+
                     HStack(spacing: 12) {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Usage Monitor")
@@ -149,4 +157,43 @@ private struct UsageBarStylePicker: View {
         UsageBar(id: "Model", percent: 85, scale: .claude),
         UsageBar(id: "Codex", percent: 100, scale: .codex)
     ]
+}
+
+/// Which limits get a bar beside the camera. The Usage tab always lists them all.
+private struct UsageBarChoices: View {
+    @ObservedObject var settingsManager: SettingsManager
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Bars Beside the Camera")
+                    .font(.system(size: 13, weight: .medium))
+                Text("Choose which limits get a bar in the closed notch. The Usage tab still shows them all.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+            }
+
+            HStack(spacing: 18) {
+                ForEach(UsageLimitKind.allCases) { kind in
+                    Toggle(kind.title, isOn: Binding(
+                        get: { settingsManager.showsUsageBar(kind) },
+                        set: { settingsManager.setShowsUsageBar(kind, $0) }
+                    ))
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 12, weight: .medium))
+                    .help(Text(Self.help(for: kind)))
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    private static func help(for kind: UsageLimitKind) -> String {
+        switch kind {
+        case .fiveHour: return "Claude's 5-hour session limit"
+        case .weekly: return "Claude's weekly limit across all models"
+        case .modelWeekly: return "Claude's weekly limits for a single model, such as Fable"
+        case .codexWeekly: return "Codex's weekly limit"
+        }
+    }
 }

@@ -13,9 +13,26 @@
 import Combine
 import Foundation
 
+/// Which limit a usage window is, so each can be shown or hidden on its own.
+nonisolated enum UsageLimitKind: String, CaseIterable, Identifiable, Sendable {
+    case fiveHour, weekly, modelWeekly, codexWeekly
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .fiveHour: return "5-hour"
+        case .weekly: return "Weekly"
+        case .modelWeekly: return "Model weekly"
+        case .codexWeekly: return "Codex weekly"
+        }
+    }
+}
+
 nonisolated struct UsageWindow: Equatable, Identifiable {
     var id: String { label }
     let label: String
+    var kind: UsageLimitKind = .weekly
     /// Percent of the window used, 0 to 100+.
     let percent: Double
     let resetsAt: Date?
@@ -34,26 +51,26 @@ nonisolated struct AIUsageSnapshot: Equatable {
         guard let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return nil }
         var snapshot = AIUsageSnapshot()
 
-        func window(_ object: Any?, label: String, percentKey: String = "utilization") -> UsageWindow? {
+        func window(_ object: Any?, label: String, kind: UsageLimitKind, percentKey: String = "utilization") -> UsageWindow? {
             guard let dict = object as? [String: Any],
                   let percent = (dict[percentKey] as? NSNumber)?.doubleValue else { return nil }
-            return UsageWindow(label: label, percent: percent, resetsAt: date(dict["resets_at"]))
+            return UsageWindow(label: label, kind: kind, percent: percent, resetsAt: date(dict["resets_at"]))
         }
 
-        if let five = window(root["five_hour"], label: "5 hours") { snapshot.claude.append(five) }
-        if let seven = window(root["seven_day"], label: "Week") { snapshot.claude.append(seven) }
+        if let five = window(root["five_hour"], label: "5 hours", kind: .fiveHour) { snapshot.claude.append(five) }
+        if let seven = window(root["seven_day"], label: "Week", kind: .weekly) { snapshot.claude.append(seven) }
         // Model-scoped weekly caps, such as a Fable-only limit.
         for limit in root["limits"] as? [[String: Any]] ?? [] where limit["kind"] as? String == "weekly_scoped" {
             let scope = limit["scope"] as? [String: Any]
             let model = (scope?["model"] as? [String: Any])?["display_name"] as? String
-            if let scoped = window(limit, label: model ?? "Model week", percentKey: "percent") {
+            if let scoped = window(limit, label: model ?? "Model week", kind: .modelWeekly, percentKey: "percent") {
                 snapshot.claude.append(scoped)
             }
         }
         snapshot.claudeError = (root["claude_error"] as? String).flatMap(Self.shortError)
 
         if let codex = root["codex"] as? [String: Any] {
-            snapshot.codex = window(codex["weekly"], label: "Codex")
+            snapshot.codex = window(codex["weekly"], label: "Codex", kind: .codexWeekly)
             snapshot.codexError = (codex["error"] as? String).flatMap(Self.shortError)
         }
 

@@ -325,6 +325,17 @@ final class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(showUsageTab, forKey: "showUsageTab") }
     }
 
+    /// Limits left out of the closed notch's usage bars. Empty shows them all.
+    @Published var hiddenUsageBars: Set<UsageLimitKind> {
+        didSet { UserDefaults.standard.set(hiddenUsageBars.map(\.rawValue).sorted(), forKey: "hiddenUsageBars") }
+    }
+
+    func showsUsageBar(_ kind: UsageLimitKind) -> Bool { !hiddenUsageBars.contains(kind) }
+
+    func setShowsUsageBar(_ kind: UsageLimitKind, _ shows: Bool) {
+        if shows { hiddenUsageBars.remove(kind) } else { hiddenUsageBars.insert(kind) }
+    }
+
     @Published var usageBarStyle: UsageBarStyle {
         didSet { UserDefaults.standard.set(usageBarStyle.rawValue, forKey: "usageBarStyle") }
     }
@@ -413,6 +424,8 @@ final class SettingsManager: ObservableObject {
         self.showAgentSessions = UserDefaults.standard.object(forKey: "showAgentSessions") as? Bool ?? Defaults.showAgentSessions
         self.showMeetingCountdown = UserDefaults.standard.object(forKey: "showMeetingCountdown") as? Bool ?? Defaults.showMeetingCountdown
         self.showUsageTab = UserDefaults.standard.object(forKey: "showUsageTab") as? Bool ?? Defaults.showUsageTab
+        self.hiddenUsageBars = Set((UserDefaults.standard.stringArray(forKey: "hiddenUsageBars") ?? [])
+            .compactMap(UsageLimitKind.init(rawValue:)))
         self.usageBarStyle = UserDefaults.standard.string(forKey: "usageBarStyle").flatMap(UsageBarStyle.init(rawValue:))
             ?? Defaults.usageBarStyle
         self.showSystemTab = UserDefaults.standard.object(forKey: "showSystemTab") as? Bool ?? Defaults.showSystemTab
