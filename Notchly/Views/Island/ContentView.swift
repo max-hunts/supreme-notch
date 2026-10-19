@@ -226,6 +226,7 @@ struct ContentView: View {
             agentEventManager.setHolding(newValue == .opened)
             if newValue != .opened {
                 extrasPanelModel.commitNote()
+                extrasPanelModel.askAI.endEditing()
             }
             playPendingNetworkEventIfReady()
             guard newValue != .opened else { return }

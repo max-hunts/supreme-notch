@@ -60,6 +60,9 @@ extension ContentView {
             wanted = 384
         case .note, .output:
             wanted = 344
+        case .ask:
+            // Room to read an answer.
+            wanted = 460
         }
         return usesMusicLayout ? max(wanted, 372) : wanted
     }
@@ -218,6 +221,7 @@ extension ContentView {
             outputs: audioOutputManager.devices.count,
             usageRows: aiUsageMonitor.rowCount,
             shelfItems: fileShelfModel.items.count,
+            askHasConversation: extrasPanelModel.askAI.hasConversation,
             hasMeeting: liveActivityModel.activity != nil
         )
     }

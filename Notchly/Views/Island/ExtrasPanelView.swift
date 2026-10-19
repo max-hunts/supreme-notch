@@ -16,7 +16,7 @@ import SwiftUI
 @MainActor
 final class ExtrasPanelModel: ObservableObject {
     enum Tab: String, CaseIterable, Identifiable {
-        case agents, usage, ports, system, shelf, note, output
+        case agents, usage, ports, system, shelf, note, ask, output
         var id: String { rawValue }
 
         var title: String {
@@ -27,6 +27,7 @@ final class ExtrasPanelModel: ObservableObject {
             case .system: return "System"
             case .shelf: return "Shelf"
             case .note: return "Note"
+            case .ask: return "Ask"
             case .output: return "Output"
             }
         }
@@ -39,6 +40,7 @@ final class ExtrasPanelModel: ObservableObject {
             case .system: return "cpu"
             case .shelf: return "tray.full"
             case .note: return "note.text"
+            case .ask: return "bubble.left.and.text.bubble.right"
             case .output: return "speaker.wave.2"
             }
         }
@@ -51,13 +53,20 @@ final class ExtrasPanelModel: ObservableObject {
     }
     @Published var noteDraft = ""
     @Published private(set) var isEditingNote = false
+    /// The Ask tab's conversation; its changes resize the panel.
+    let askAI = AskAIModel()
 
     private var resignObserver: NSObjectProtocol?
+    private var askAIChanges: AnyCancellable?
 
     init() {
         chosenTab = UserDefaults.standard.string(forKey: "extrasPanelTab").flatMap(Tab.init(rawValue:))
         noteText = UserDefaults.standard.string(forKey: "quickNoteText") ?? ""
+        askAIChanges = askAI.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
     }
+
+    /// True while you are typing in the notch, so it stays open.
+    var isTyping: Bool { isEditingNote || askAI.isEditing }
 
     private var swipeTravel: CGFloat = 0
     private var swipeConsumed = false
@@ -112,6 +121,7 @@ final class ExtrasPanelModel: ObservableObject {
         if settings.showSystemTab { tabs.append(.system) }
         if settings.showFileShelf { tabs.append(.shelf) }
         if settings.showQuickNote { tabs.append(.note) }
+        if settings.showAskAI { tabs.append(.ask) }
         if settings.showOutputPicker { tabs.append(.output) }
         return tabs
     }
@@ -239,6 +249,11 @@ struct ExtrasPanelView: View {
     static let agentRowHeight: CGFloat = IslandMetrics.rowHeight
     static let outputRowHeight: CGFloat = IslandMetrics.rowHeight
     static let noteHeight: CGFloat = 54
+    /// The Ask tab: just the question field until there is a conversation to show above it.
+    static let askConversationHeight: CGFloat = 196
+    static func askHeight(hasConversation: Bool) -> CGFloat {
+        hasConversation ? askConversationHeight + 8 + 30 + 4 : noteHeight
+    }
 
     /// The battery panel and music player when the notch opens: fade in while sliding
     /// straight down from the top. No scaling, so nothing drifts sideways as the island
@@ -269,6 +284,7 @@ struct ExtrasPanelView: View {
         outputs: Int,
         usageRows: Int = 1,
         shelfItems: Int = 0,
+        askHasConversation: Bool = false,
         hasMeeting: Bool = false
     ) -> CGFloat {
         guard let tab else { return 0 }
@@ -280,6 +296,7 @@ struct ExtrasPanelView: View {
         case .shelf: content = ShelfTabView.contentHeight(for: shelfItems)
         case .ports: content = PortsListView.contentHeight(for: ports)
         case .note: content = noteHeight
+        case .ask: content = askHeight(hasConversation: askHasConversation)
         case .output: content = CGFloat(max(1, min(outputs, 6))) * outputRowHeight
         }
         return headerHeight + contentGap(for: tab) + content + bottomPadding + (hasMeeting ? meetingStripHeight : 0)
@@ -329,6 +346,8 @@ struct ExtrasPanelView: View {
                     PortsListView(monitor: portsMonitor)
                 case .note:
                     QuickNoteView(model: model)
+                case .ask:
+                    AskAIView(model: model.askAI)
                 case .output:
                     AudioOutputListView(manager: audioOutputs)
                 case nil:
@@ -348,7 +367,7 @@ struct ExtrasPanelView: View {
         case .agents: return sessionTracker.sessions.isEmpty ? nil : sessionTracker.sessions.count
         case .ports: return portsMonitor.panelPorts.isEmpty ? nil : portsMonitor.panelPorts.count
         case .shelf: return shelf.items.isEmpty ? nil : shelf.items.count
-        case .usage, .system, .note, .output: return nil
+        case .usage, .system, .note, .ask, .output: return nil
         }
     }
 }
@@ -730,6 +749,183 @@ private struct QuickNoteView: View {
     }
 
     private func noteButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(.white.opacity(0.7))
+                .frame(width: 28, height: 28)
+                .background(Color.white.opacity(0.08))
+                .clipShape(Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(help)
+    }
+}
+
+// MARK: - Ask tab
+
+private struct AskAIView: View {
+    @ObservedObject var model: AskAIModel
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if model.hasConversation {
+                conversation
+            }
+            inputRow
+            if !model.hasConversation {
+                Text("Answers come from ChatGPT on your subscription, through Codex")
+                    .font(.system(size: 10.5, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.35))
+            }
+        }
+        .onChange(of: model.isEditing) { _, editing in
+            guard editing else { return }
+            Task { @MainActor in
+                try? await Task.sleep(for: .milliseconds(80))
+                isFocused = true
+            }
+        }
+        .onDisappear { model.endEditing() }
+    }
+
+    @ViewBuilder
+    private var conversation: some View {
+        if SnapshotRendering.isActive {
+            // Offscreen renders cannot draw a scroll view; show the end of the conversation.
+            messageList
+                .frame(height: ExtrasPanelView.askConversationHeight, alignment: .bottom)
+                .clipped()
+        } else {
+            scrollingConversation
+        }
+    }
+
+    private var messageList: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            ForEach(model.messages) { message in
+                messageView(message)
+                    // A question sits closer to its answer than to the answer before it.
+                    .padding(.top, message.role == .user && message.id != model.messages.first?.id ? 9 : 0)
+                    .id(message.id)
+            }
+            if model.isRunning {
+                HStack(spacing: 6) {
+                    ProgressView().controlSize(.mini).tint(.white)
+                    Text("Thinking…")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.5))
+                }
+                .id("status")
+            } else if let error = model.errorText {
+                Text(error)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color(red: 1.0, green: 0.55, blue: 0.5))
+                    .id("status")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 2)
+    }
+
+    private var scrollingConversation: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical, showsIndicators: false) {
+                messageList
+            }
+            .frame(height: ExtrasPanelView.askConversationHeight)
+            .onChange(of: model.messages.count) { _, _ in scrollToEnd(proxy) }
+            .onChange(of: model.isRunning) { _, _ in scrollToEnd(proxy) }
+            .onAppear { scrollToEnd(proxy) }
+        }
+    }
+
+    private func scrollToEnd(_ proxy: ScrollViewProxy) {
+        withAnimation(.easeOut(duration: 0.2)) {
+            if model.isRunning || model.errorText != nil {
+                proxy.scrollTo("status", anchor: .bottom)
+            } else if let last = model.messages.last {
+                proxy.scrollTo(last.id, anchor: .top)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func messageView(_ message: AskAIModel.Message) -> some View {
+        switch message.role {
+        case .user:
+            Text(verbatim: message.text)
+                .font(.system(size: 11.5, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.5))
+                .textSelection(.enabled)
+        case .assistant:
+            // Regular weight, so bold in an answer stands out.
+            Text(Self.markdown(message.text))
+                .font(.system(size: 12.5))
+                .foregroundStyle(.white.opacity(0.92))
+                .lineSpacing(2)
+                .textSelection(.enabled)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// Bold, italics, code and links render; anything else shows as typed.
+    private static func markdown(_ text: String) -> AttributedString {
+        (try? AttributedString(
+            markdown: text,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )) ?? AttributedString(text)
+    }
+
+    private var inputRow: some View {
+        HStack(spacing: 8) {
+            if model.isEditing {
+                TextField(model.messages.isEmpty ? "Ask anything, then press Return" : "Ask a follow-up", text: $model.draft)
+                    .textFieldStyle(.plain)
+                    .font(.system(size: 12.5, weight: .medium))
+                    .foregroundStyle(.white)
+                    .focused($isFocused)
+                    .onSubmit { model.send() }
+                    .onExitCommand { model.endEditing() }
+                    .padding(.horizontal, 10)
+                    .frame(height: 30)
+                    .background(Color.white.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+            } else {
+                Button {
+                    model.beginEditing()
+                } label: {
+                    Text(verbatim: model.messages.isEmpty ? "Click to ask a question" : "Click to ask a follow-up")
+                        .font(.system(size: 12.5, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.4))
+                        .padding(.horizontal, 10)
+                        .frame(maxWidth: .infinity, minHeight: 30, alignment: .leading)
+                        .background(Color.white.opacity(0.06))
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            if model.isRunning {
+                askButton("stop.fill", help: "Stop") { model.stop() }
+            } else if model.isEditing && !model.draft.trimmingCharacters(in: .whitespaces).isEmpty {
+                askButton("arrow.up", help: "Ask") { model.send() }
+            } else if model.hasConversation {
+                if let answer = model.lastAnswer {
+                    askButton("doc.on.doc", help: "Copy the last answer") {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(answer, forType: .string)
+                    }
+                }
+                askButton("trash", help: "Start over") { model.clear() }
+            }
+        }
+    }
+
+    private func askButton(_ symbol: String, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 11, weight: .bold))

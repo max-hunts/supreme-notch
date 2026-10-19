@@ -108,6 +108,7 @@ final class SettingsManager: ObservableObject {
         static let showMicMute = true
         static let openOnHover = true
         static let showQuickNote = true
+        static let showAskAI = true
         static let showOutputPicker = true
         static let showAudioOutputGlance = true
     }
@@ -348,6 +349,10 @@ final class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(showQuickNote, forKey: "showQuickNote") }
     }
 
+    @Published var showAskAI: Bool {
+        didSet { UserDefaults.standard.set(showAskAI, forKey: "showAskAI") }
+    }
+
     @Published var showOutputPicker: Bool {
         didSet { UserDefaults.standard.set(showOutputPicker, forKey: "showOutputPicker") }
     }
@@ -415,6 +420,7 @@ final class SettingsManager: ObservableObject {
         self.showMicMute = UserDefaults.standard.object(forKey: "showMicMute") as? Bool ?? Defaults.showMicMute
         self.openOnHover = UserDefaults.standard.object(forKey: "openOnHover") as? Bool ?? Defaults.openOnHover
         self.showQuickNote = UserDefaults.standard.object(forKey: "showQuickNote") as? Bool ?? Defaults.showQuickNote
+        self.showAskAI = UserDefaults.standard.object(forKey: "showAskAI") as? Bool ?? Defaults.showAskAI
         self.showOutputPicker = UserDefaults.standard.object(forKey: "showOutputPicker") as? Bool ?? Defaults.showOutputPicker
         self.showAudioOutputGlance = UserDefaults.standard.object(forKey: "showAudioOutputGlance") as? Bool ?? Defaults.showAudioOutputGlance
 
@@ -494,6 +500,7 @@ final class SettingsManager: ObservableObject {
         showMicMute = Defaults.showMicMute
         openOnHover = Defaults.openOnHover
         showQuickNote = Defaults.showQuickNote
+        showAskAI = Defaults.showAskAI
         showOutputPicker = Defaults.showOutputPicker
         showAudioOutputGlance = Defaults.showAudioOutputGlance
     }

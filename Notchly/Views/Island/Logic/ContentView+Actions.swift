@@ -774,8 +774,8 @@ extension ContentView {
             await MainActor.run {
                 guard status == .opened || status == .musicPreview else { return }
                 guard !isPointerInsideIsland else { return }
-                // Never close under someone who is typing a note.
-                guard !extrasPanelModel.isEditingNote else { return }
+                // Never close under someone who is typing in the notch.
+                guard !extrasPanelModel.isTyping else { return }
 
                 withAnimation(animation) {
                     status = .closed

@@ -766,6 +766,14 @@ struct GlancesSettingsView: View {
                     SettingsDivider()
 
                     SettingsToggleRow(
+                        title: "Ask AI",
+                        subtitle: "An Ask tab answers quick questions with ChatGPT, on your ChatGPT subscription through Codex.",
+                        isOn: $settingsManager.showAskAI
+                    )
+
+                    SettingsDivider()
+
+                    SettingsToggleRow(
                         title: "Sound Output Picker",
                         subtitle: "An Output tab switches between speakers, headphones, and displays.",
                         isOn: $settingsManager.showOutputPicker
