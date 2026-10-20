@@ -59,9 +59,22 @@ struct GeneralSettingsView: View {
 
                     SettingsToggleRow(
                         title: "Launch at Login",
-                        subtitle: "Open BetterNotch automatically when you sign in.",
+                        subtitle: settingsManager.launchAtLoginNeedsApproval
+                            ? "macOS is waiting for you to allow BetterNotch in Login Items."
+                            : "Open BetterNotch automatically when you sign in.",
                         isOn: $settingsManager.launchAtLogin
                     )
+
+                    if settingsManager.launchAtLoginNeedsApproval {
+                        HStack {
+                            Spacer(minLength: 0)
+                            Button("Open Login Items…") {
+                                settingsManager.openLoginItemsSettings()
+                            }
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.bottom, 12)
+                    }
 
                     SettingsDivider()
 

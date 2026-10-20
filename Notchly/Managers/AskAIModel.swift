@@ -146,6 +146,7 @@ final class AskAIModel: ObservableObject {
 
     func endEditing() {
         guard isEditing else { return }
+        dictation.stop()
         isEditing = false
         if let resignObserver {
             NotificationCenter.default.removeObserver(resignObserver)
@@ -154,11 +155,34 @@ final class AskAIModel: ObservableObject {
         IslandKeyFocus.end()
     }
 
+    // MARK: Dictation
+
+    /// Dictation for the field, transcribed on this Mac.
+    let dictation = DictationModel()
+
+    /// Starts dictating into the field after anything already typed, or stops.
+    func toggleDictation() {
+        if dictation.isActive {
+            dictation.stop()
+            return
+        }
+        beginEditing()
+        let typed = draft.trimmingCharacters(in: .whitespaces)
+        let prefix = typed.isEmpty ? "" : typed + " "
+        errorText = nil
+        dictation.start(onText: { [weak self] text in
+            self?.draft = prefix + text
+        }, onFailure: { [weak self] message in
+            self?.errorText = message
+        })
+    }
+
     // MARK: Asking
 
     func send() {
         let question = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !question.isEmpty, !isRunning else { return }
+        dictation.stop()
         errorText = nil
 
         // A new thread only knows what it is told, so it gets the earlier exchange.
@@ -191,6 +215,7 @@ final class AskAIModel: ObservableObject {
     }
 
     func clear() {
+        dictation.stop()
         shutDown()
         timeoutTask?.cancel()
         isRunning = false

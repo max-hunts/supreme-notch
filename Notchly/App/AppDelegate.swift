@@ -64,6 +64,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
         guard validateSingleRunningInstance() else { return }
 
+        #if !DEBUG
+        // Debug builds share the settings, so only a release build may register itself.
+        environment.settingsManager.repairLaunchAtLogin()
+        #endif
+
         NSApp.setActivationPolicy(.accessory)
 
         menuController.install()

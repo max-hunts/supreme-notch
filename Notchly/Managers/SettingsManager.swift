@@ -161,9 +161,15 @@ final class SettingsManager: ObservableObject {
     @Published var launchAtLogin: Bool {
         didSet {
             UserDefaults.standard.set(launchAtLogin, forKey: "launchAtLogin")
+            guard !isSyncingLaunchAtLogin else { return }
             applyLaunchAtLogin(launchAtLogin)
         }
     }
+
+    /// macOS has the login item but is waiting for you to allow it in System Settings.
+    @Published private(set) var launchAtLoginNeedsApproval = false
+    /// Set while the switch is being matched to macOS, so that never registers or removes.
+    private var isSyncingLaunchAtLogin = false
     
     @Published var enableLockSound: Bool {
         didSet { UserDefaults.standard.set(enableLockSound, forKey: "enableLockSound") }
@@ -448,8 +454,30 @@ final class SettingsManager: ObservableObject {
         normalizeStatusDisplayModes()
     }
 
+    /// Matches the switch to what macOS reports, without registering or removing anything.
+    /// Waiting for approval still counts as on, with a note to allow it.
     func refreshLaunchAtLoginStatus() {
-        launchAtLogin = SMAppService.mainApp.status == .enabled
+        let status = SMAppService.mainApp.status
+        isSyncingLaunchAtLogin = true
+        defer { isSyncingLaunchAtLogin = false }
+        launchAtLoginNeedsApproval = status == .requiresApproval
+        let isOn = status == .enabled || status == .requiresApproval
+        if launchAtLogin != isOn { launchAtLogin = isOn }
+    }
+
+    /// At launch: if you turned this on but macOS no longer has the login item (it can be
+    /// dropped when the app is replaced), register it again, then match the switch.
+    func repairLaunchAtLogin() {
+        let wanted = UserDefaults.standard.bool(forKey: "launchAtLogin")
+        let status = SMAppService.mainApp.status
+        if wanted, status == .notRegistered || status == .notFound {
+            try? SMAppService.mainApp.register()
+        }
+        refreshLaunchAtLoginStatus()
+    }
+
+    func openLoginItemsSettings() {
+        SMAppService.openSystemSettingsLoginItems()
     }
 
     func resetGeneralSettings() {
@@ -546,11 +574,9 @@ final class SettingsManager: ObservableObject {
                 try SMAppService.mainApp.unregister()
             }
         } catch {
-            let actual = SMAppService.mainApp.status == .enabled
-            if launchAtLogin != actual {
-                launchAtLogin = actual
-            }
+            // Fall through: the switch shows what macOS ended up with.
         }
+        refreshLaunchAtLoginStatus()
     }
 
     private static func loadDisplayTarget() -> DisplayTarget {

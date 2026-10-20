@@ -765,6 +765,31 @@ private struct QuickNoteView: View {
 
 // MARK: - Ask tab
 
+/// The mic beside the Ask field: tap to dictate, tap again to stop. It glows red while
+/// listening.
+private struct DictationButton: View {
+    @ObservedObject var dictation: DictationModel
+    let toggle: () -> Void
+
+    var body: some View {
+        let listening = dictation.state == .listening
+        Button(action: toggle) {
+            Image(systemName: listening ? "mic.fill" : "mic")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(listening
+                    ? Color(red: 0.97, green: 0.32, blue: 0.29)
+                    : .white.opacity(dictation.state == .starting ? 0.35 : 0.7))
+                .symbolEffect(.pulse, isActive: listening)
+                .frame(width: 28, height: 28)
+                .background(Color.white.opacity(listening ? 0.14 : 0.08))
+                .clipShape(Circle())
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .help(listening ? "Stop dictating" : "Dictate your question. Speech is transcribed on this Mac.")
+    }
+}
+
 private struct AskAIView: View {
     @ObservedObject var model: AskAIModel
     @FocusState private var isFocused: Bool
@@ -978,6 +1003,10 @@ private struct AskAIView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+            }
+
+            if !model.isRunning {
+                DictationButton(dictation: model.dictation) { model.toggleDictation() }
             }
 
             modelMenu

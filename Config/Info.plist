@@ -10,6 +10,10 @@
 	<string>BetterNotch reads your calendar to remind you in the notch shortly before a meeting starts. It never changes events.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
 	<string>BetterNotch watches your Downloads folder to show a short notice when a download finishes.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>BetterNotch listens only while you dictate a question in the Ask tab. Speech is transcribed on this Mac.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>BetterNotch turns what you dictate in the Ask tab into text, on this Mac only.</string>
 	<key>SUAutomaticallyUpdate</key>
 	<false/>
 	<key>SUEnableAutomaticChecks</key>
