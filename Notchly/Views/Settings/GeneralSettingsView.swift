@@ -784,6 +784,32 @@ struct GlancesSettingsView: View {
                         isOn: $settingsManager.showAskAI
                     )
 
+                    if settingsManager.showAskAI {
+                        SettingsDivider()
+
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Dictation")
+                                    .font(.system(size: 13, weight: .semibold))
+                                Text(settingsManager.dictationEngine.detail)
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            Spacer(minLength: 16)
+                            Picker("Dictation", selection: $settingsManager.dictationEngine) {
+                                ForEach(DictationEngine.allCases) { engine in
+                                    Text(engine.title).tag(engine)
+                                }
+                            }
+                            .labelsHidden()
+                            .pickerStyle(.segmented)
+                            .fixedSize()
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                    }
+
                     SettingsDivider()
 
                     SettingsToggleRow(

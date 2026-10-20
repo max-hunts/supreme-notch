@@ -98,7 +98,12 @@ The Ask tab answers with ChatGPT's models on your **ChatGPT subscription**, with
 
 The menu beside the field picks the model and speed. It lists every model Codex offers you and defaults to the fast Luna model at low reasoning, where a follow-up starts answering in about a second.
 
-To dictate a question, click the mic beside the field and talk; the words appear as you speak, and a second click stops. Speech is transcribed on your Mac with Apple's on-device recognition, so no audio leaves it. The first time, macOS asks for Microphone and Speech Recognition access.
+To dictate a question, click the mic beside the field and talk, then click again to stop. **Settings → General → Dictation** picks how speech becomes text:
+
+- **ChatGPT** (the default) uses ChatGPT's own transcription, the one behind dictation in the ChatGPT app, on your subscription. It is the most accurate. The audio goes to OpenAI, and the text appears a moment after you stop. Pressing Return while it records stops and transcribes.
+- **On this Mac** uses Apple's on-device speech recognition (the newer engine on macOS 26 and later). No audio leaves your Mac, and the words appear as you speak.
+
+The first time, macOS asks for Microphone access, plus Speech Recognition for the on-device engine.
 
 Each conversation is a bare chat: Codex runs in an empty private folder, read-only, with your MCP servers, plugins and hooks switched off, and the conversation is not saved to Codex's history. Turn the tab off in **Settings → General → Ask AI**.
 

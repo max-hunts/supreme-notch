@@ -160,7 +160,8 @@ final class AskAIModel: ObservableObject {
     /// Dictation for the field, transcribed on this Mac.
     let dictation = DictationModel()
 
-    /// Starts dictating into the field after anything already typed, or stops.
+    /// Starts dictating into the field after anything already typed, or stops. The engine
+    /// is the one chosen in Settings > General > Dictation.
     func toggleDictation() {
         if dictation.isActive {
             dictation.stop()
@@ -170,7 +171,9 @@ final class AskAIModel: ObservableObject {
         let typed = draft.trimmingCharacters(in: .whitespaces)
         let prefix = typed.isEmpty ? "" : typed + " "
         errorText = nil
-        dictation.start(onText: { [weak self] text in
+        let engine = UserDefaults.standard.string(forKey: "dictationEngine")
+            .flatMap(DictationEngine.init(rawValue:)) ?? .chatGPT
+        dictation.start(engine: engine, onText: { [weak self] text in
             self?.draft = prefix + text
         }, onFailure: { [weak self] message in
             self?.errorText = message
@@ -181,6 +184,11 @@ final class AskAIModel: ObservableObject {
 
     func send() {
         let question = draft.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Return while ChatGPT is still recording sends the recording off for text first.
+        if dictation.isRecordingForChatGPT {
+            dictation.stop()
+            return
+        }
         guard !question.isEmpty, !isRunning else { return }
         dictation.stop()
         errorText = nil
@@ -215,7 +223,7 @@ final class AskAIModel: ObservableObject {
     }
 
     func clear() {
-        dictation.stop()
+        dictation.cancel()
         shutDown()
         timeoutTask?.cancel()
         isRunning = false
@@ -445,7 +453,7 @@ final class AskAIModel: ObservableObject {
         return url
     }
 
-    private static var appVersion: String {
+    static var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "1.0"
     }
 

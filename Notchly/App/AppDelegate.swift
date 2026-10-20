@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // The rename migration must run before any manager reads its settings.
     private let environment: AppEnvironment = {
         let arguments = ProcessInfo.processInfo.arguments
-        if !arguments.contains("-renderReadmeImages") && !arguments.contains("-layoutCheck") && !arguments.contains("-askAICheck") && !arguments.contains("-widthCheck") {
+        if !arguments.contains("-renderReadmeImages") && !arguments.contains("-layoutCheck") && !arguments.contains("-askAICheck") && !arguments.contains("-widthCheck") && !arguments.contains("-dictationCheck") {
             LegacyIdentityMigration.runIfNeeded()
         }
         return AppEnvironment()
@@ -52,6 +52,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             AskAICheck.run(to: file)
             return
         }
+        if let check = DictationCheck.arguments {
+            DictationCheck.run(audio: check.audio, report: check.report)
+            return
+        }
         #endif
         guard validateSingleRunningInstance() else { return }
         environment.lockScreenWallpaperManager.recoverSynchronously()
@@ -60,7 +64,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         #if DEBUG
-        if AskAICheck.outputFile != nil { return }
+        if AskAICheck.outputFile != nil || DictationCheck.arguments != nil { return }
         #endif
         guard validateSingleRunningInstance() else { return }
 

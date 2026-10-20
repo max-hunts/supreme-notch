@@ -158,6 +158,11 @@ final class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(enableAppleMusicAppleScriptControl, forKey: "enableAppleMusicAppleScriptControl") }
     }
 
+    /// How the Ask tab's mic turns speech into text.
+    @Published var dictationEngine: DictationEngine {
+        didSet { UserDefaults.standard.set(dictationEngine.rawValue, forKey: "dictationEngine") }
+    }
+
     @Published var launchAtLogin: Bool {
         didSet {
             UserDefaults.standard.set(launchAtLogin, forKey: "launchAtLogin")
@@ -397,6 +402,8 @@ final class SettingsManager: ObservableObject {
         self.enableSpotifyAppleScriptControl = UserDefaults.standard.object(forKey: "enableSpotifyAppleScriptControl") as? Bool ?? Defaults.enableSpotifyAppleScriptControl
         self.enableAppleMusicAppleScriptControl = UserDefaults.standard.object(forKey: "enableAppleMusicAppleScriptControl") as? Bool ?? Defaults.enableAppleMusicAppleScriptControl
 
+        self.dictationEngine = UserDefaults.standard.string(forKey: "dictationEngine")
+            .flatMap(DictationEngine.init(rawValue:)) ?? .chatGPT
         let savedLaunchAtLogin = UserDefaults.standard.object(forKey: "launchAtLogin") as? Bool
         let systemLaunchAtLogin = SMAppService.mainApp.status == .enabled
         self.launchAtLogin = savedLaunchAtLogin ?? systemLaunchAtLogin
