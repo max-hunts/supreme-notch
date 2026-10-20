@@ -178,10 +178,13 @@ extension ContentView {
         )
     }
 
-    /// Closed music: the ring's wing right of the camera, or the waveform's with the
-    /// battery turned off.
+    /// Closed music: the right wing holds a meeting countdown, the ring, or the waveform
+    /// with the battery turned off.
     var musicRightWingWidth: CGFloat {
-        settingsManager.showBattery
+        if let activity = closedLiveActivity {
+            return LiveActivityBadge.wingWidth(for: activity, closedHeight: closedHeight, cameraHousingInset: cameraHousingInset)
+        }
+        return settingsManager.showBattery
             ? batterySideWingWidth
             : CompactMusicView.waveformWingWidth(closedHeight: closedHeight, cameraHousingInset: cameraHousingInset)
     }
@@ -192,12 +195,6 @@ extension ContentView {
 
     var musicWingOffset: CGFloat {
         (musicRightWingWidth - musicLeftWingWidth) / 2
-    }
-
-    /// The closed music island hugs the camera with its two wings, unless a meeting or
-    /// agent badge needs the wider island or the wings are tucked.
-    var usesMusicWings: Bool {
-        status == .closed && closedLiveActivity == nil && !tucksWings
     }
 
     var agentTopClearance: CGFloat {

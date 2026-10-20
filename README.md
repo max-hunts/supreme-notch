@@ -167,7 +167,7 @@ The `scripts` folder has the rest of the workflow, all for a Mac with Xcode:
 
 Both build scripts expect a [claude-usage-monitor](https://github.com/max-hunts/claude-usage-monitor) checkout at `~/Desktop/claude-usage-monitor`, or wherever `USAGE_MONITOR_DIR` points.
 
-To check alert spacing after a layout change, run `scripts/layout-check.sh`. It shows sample alerts in the real island, saves a picture of each, and fails if the buttons are not 12 pt from the island's edges or the text sits too far above them.
+To check the layout after a change, run `scripts/layout-check.sh`. It shows sample alerts in the real island, saves a picture of each, and fails if the buttons are not 12 pt from the island's edges or the text sits too far above them. It then swipes through the tabs and fails if the island's two edges ever move by different amounts while it resizes.
 
 The README images are drawn by the app's own views with sample data. In a Debug build, run `BetterNotch.app/Contents/MacOS/BetterNotch -renderReadmeImages <folder>` to regenerate the tab and alert images.
 

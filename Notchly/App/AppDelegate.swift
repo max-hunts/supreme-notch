@@ -12,7 +12,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // The rename migration must run before any manager reads its settings.
     private let environment: AppEnvironment = {
         let arguments = ProcessInfo.processInfo.arguments
-        if !arguments.contains("-renderReadmeImages") && !arguments.contains("-layoutCheck") && !arguments.contains("-askAICheck") {
+        if !arguments.contains("-renderReadmeImages") && !arguments.contains("-layoutCheck") && !arguments.contains("-askAICheck") && !arguments.contains("-widthCheck") {
             LegacyIdentityMigration.runIfNeeded()
         }
         return AppEnvironment()
@@ -71,7 +71,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         environment.codexHookIntegrationManager.migrateIfNeeded()
         #if DEBUG
         // The layout check shows only its own sample alerts, never real ones.
-        if LayoutCheck.outputDirectory == nil { environment.agentEventManager.start() }
+        if LayoutCheck.outputDirectory == nil && WidthCheck.outputDirectory == nil { environment.agentEventManager.start() }
         #else
         environment.agentEventManager.start()
         #endif
@@ -118,6 +118,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #if DEBUG
         if let directory = LayoutCheck.outputDirectory {
             LayoutCheck.run(environment: environment, window: { [weak self] in
+                self?.overlayController.debugIslandWindow
+            }, to: directory)
+        }
+        if let directory = WidthCheck.outputDirectory {
+            WidthCheck.run(environment: environment, window: { [weak self] in
                 self?.overlayController.debugIslandWindow
             }, to: directory)
         }

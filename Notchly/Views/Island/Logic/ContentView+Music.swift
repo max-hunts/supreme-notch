@@ -6,14 +6,15 @@
 //
 
 import SwiftUI
+import AppKit
 
 extension ContentView {
     @ViewBuilder
     var musicContainer: some View {
         let isWaveformActive = animationsEnabled && musicManager.isPlaying
-        let wings = usesMusicWings
-        let containerSize = wings ? musicWingSize : layout.islandSize
-        let containerOffset = wings ? musicWingOffset : 0
+        let wings = musicContainerWings
+        let containerSize = wings.map { CGSize(width: layout.idleWidth + $0.left + $0.right, height: closedHeight) } ?? layout.islandSize
+        let containerOffset = wings.map { ($0.right - $0.left) / 2 } ?? 0
         let clippedWidth = max(0, max(layout.islandSize.width, containerSize.width + abs(containerOffset) * 2) + layout.cornerRadius * 2)
         let agentEvent = displayedAgentEvent ?? agentEventManager.currentEvent
         let hasPendingAgentEvent =
@@ -73,13 +74,13 @@ extension ContentView {
                     artwork: musicManager.artworkImage,
                     waveformColor: musicManager.waveformColor,
                     isPlaying: isWaveformActive,
-                    size: closedLiveActivity == nil ? musicWingSize : layout.closedSize,
+                    size: musicWingSize,
                     hoverOffsetY: hoverOffsetY,
                     skipIndicator: skipIndicator,
                     liveActivity: closedLiveActivity,
                     micMuted: closedMicMuted,
                     statusRing: settingsManager.showBattery ? closedStatusRing : nil,
-                    horizontalOffset: closedLiveActivity == nil ? musicWingOffset : 0
+                    horizontalOffset: musicWingOffset
                 )
                 .animation(.smooth(duration: 0.4, extraBounce: 0), value: closedLiveActivity)
                 .opacity(tucksWings ? 0 : 1)
@@ -111,7 +112,8 @@ extension ContentView {
                 FocusMusicStatusView(
                     isActive: focusStatusIsActive,
                     hidesLabel: settingsManager.hideFocusLabel,
-                    size: layout.focusPreviewSize
+                    size: containerSize,
+                    horizontalOffset: containerOffset
                 )
                 .transition(.opacity.animation(.easeInOut(duration: 0.18)))
                 .zIndex(4)
@@ -123,7 +125,8 @@ extension ContentView {
                     lineWidth: CGFloat(settingsManager.brightnessLineWidth),
                     showsLine: settingsManager.showBrightnessLine,
                     showsPercent: settingsManager.showBrightnessPercent,
-                    size: layout.brightnessPreviewSize
+                    size: containerSize,
+                    horizontalOffset: containerOffset
                 )
                 .transition(.identity)
                 .zIndex(4)
@@ -136,7 +139,8 @@ extension ContentView {
                     lineWidth: CGFloat(settingsManager.soundLineWidth),
                     showsLine: settingsManager.showSoundLine,
                     showsPercent: settingsManager.showSoundPercent,
-                    size: layout.volumePreviewSize
+                    size: containerSize,
+                    horizontalOffset: containerOffset
                 )
                 .transition(.identity)
                 .zIndex(4)
@@ -147,8 +151,10 @@ extension ContentView {
                     event: networkStatusManager.currentEvent,
                     size: status == .networkPreview
                         ? layout.networkPreviewSize
-                        : layout.networkClosedSize,
-                    isExpanded: status == .networkPreview
+                        : containerSize,
+                    isExpanded: status == .networkPreview,
+                    closedInset: StatusPreviewWings.networkInset(closedHeight: closedHeight),
+                    closedOffset: containerOffset
                 )
                 .offset(y: 10)
                 .transition(.opacity.combined(with: .offset(y: 6)))
@@ -310,6 +316,47 @@ extension ContentView {
                 }
             }
         )
+        .symmetricIslandResize(width: containerSize.width, offset: containerOffset, animation: animation)
+    }
+
+    /// The wings the island hugs for what the music container shows now, or nil for a
+    /// state with its own size (opened, previews, collapses, tucked wings).
+    var musicContainerWings: (left: CGFloat, right: CGFloat)? {
+        let height = closedHeight
+        func wing(_ content: CGFloat, _ inset: CGFloat) -> CGFloat {
+            ClosedWings.width(content: content, inset: inset, cameraHousingInset: cameraHousingInset)
+        }
+        let iconWing = wing(StatusPreviewWings.iconBox, StatusPreviewWings.iconInset(closedHeight: height))
+        let textInset = StatusPreviewWings.textInset(closedHeight: height)
+        switch status {
+        case .closed:
+            guard !tucksWings else { return nil }
+            return (musicLeftWingWidth, musicRightWingWidth)
+        case .focusPreview:
+            let label = settingsManager.hideFocusLabel ? 0 : StatusPreviewWings.focusLabelWidth(isActive: focusStatusIsActive)
+            return (iconWing, wing(label, textInset))
+        case .brightnessPreview:
+            let right = StatusPreviewWings.levelWidth(
+                showsLine: settingsManager.showBrightnessLine,
+                showsPercent: settingsManager.showBrightnessPercent,
+                lineWidth: CGFloat(settingsManager.brightnessLineWidth),
+                percent: Int((min(max(brightnessManager.brightnessLevel, 0), 1) * 100).rounded())
+            )
+            return (iconWing, wing(right, textInset))
+        case .volumePreview:
+            let right = StatusPreviewWings.levelWidth(
+                showsLine: settingsManager.showSoundLine,
+                showsPercent: settingsManager.showSoundPercent,
+                lineWidth: CGFloat(settingsManager.soundLineWidth),
+                percent: musicManager.isOutputMuted ? 0 : Int((min(max(musicManager.outputVolume, 0), 1) * 100).rounded())
+            )
+            return (iconWing, wing(right, textInset))
+        case .networkClosed:
+            let network = wing(StatusPreviewWings.networkBox, StatusPreviewWings.networkInset(closedHeight: height))
+            return (network, network)
+        default:
+            return nil
+        }
     }
 
     func handleMusicScroll(deltaX: CGFloat, deltaY: CGFloat) {
@@ -515,10 +562,46 @@ extension ContentView {
     }
 }
 
+/// Sizes for the Focus, brightness, volume and network notices in the closed wings: an
+/// icon left of the camera, a label, level or status right of it.
+enum StatusPreviewWings {
+    static let iconBox: CGFloat = 24
+    static let networkBox: CGFloat = 22
+    static let labelFont = NSFont.systemFont(ofSize: 13, weight: .semibold)
+    static let percentFont = NSFont.monospacedDigitSystemFont(ofSize: 13, weight: .semibold)
+
+    static func iconInset(closedHeight: CGFloat) -> CGFloat {
+        ClosedWings.inset(closedHeight: closedHeight, contentHeight: iconBox)
+    }
+
+    static func textInset(closedHeight: CGFloat) -> CGFloat {
+        ClosedWings.inset(closedHeight: closedHeight, contentHeight: labelFont.pointSize)
+    }
+
+    static func networkInset(closedHeight: CGFloat) -> CGFloat {
+        ClosedWings.inset(closedHeight: closedHeight, contentHeight: networkBox)
+    }
+
+    static func focusLabelWidth(isActive: Bool) -> CGFloat {
+        ClosedWings.textWidth(isActive ? "On" : "Off", font: labelFont)
+    }
+
+    /// Digits share one width, so this changes only at 10 and 100.
+    static func percentWidth(_ percent: Int) -> CGFloat {
+        ClosedWings.textWidth("\(percent)", font: percentFont)
+    }
+
+    static func levelWidth(showsLine: Bool, showsPercent: Bool, lineWidth: CGFloat, percent: Int) -> CGFloat {
+        if showsLine { return lineWidth }
+        return showsPercent ? percentWidth(percent) : 0
+    }
+}
+
 private struct FocusMusicStatusView: View {
     let isActive: Bool
     let hidesLabel: Bool
     let size: CGSize
+    var horizontalOffset: CGFloat = 0
 
     private var accentColor: Color {
         isActive ? Color(red: 0.62, green: 0.76, blue: 1.0) : .white.opacity(0.76)
@@ -540,13 +623,15 @@ private struct FocusMusicStatusView: View {
 
             if !hidesLabel {
                 Text(statusText)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(Font(StatusPreviewWings.labelFont))
                     .foregroundStyle(.white.opacity(0.9))
                     .lineLimit(1)
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, StatusPreviewWings.iconInset(closedHeight: size.height))
+        .padding(.trailing, StatusPreviewWings.textInset(closedHeight: size.height))
         .frame(width: size.width, height: size.height)
+        .offset(x: horizontalOffset)
     }
 }
 
@@ -556,6 +641,7 @@ private struct BrightnessStatusView: View {
     let showsLine: Bool
     let showsPercent: Bool
     let size: CGSize
+    var horizontalOffset: CGFloat = 0
 
     private var clampedBrightness: Double {
         min(max(brightness, 0), 1)
@@ -597,16 +683,16 @@ private struct BrightnessStatusView: View {
                     .frame(width: lineWidth, height: 20)
                 } else if showsPercent {
                     Text("\(percentage)")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(Font(StatusPreviewWings.percentFont))
                         .foregroundStyle(.white.opacity(0.9))
-                        .monospacedDigit()
-                        .frame(width: 30, alignment: .trailing)
+                        .fixedSize()
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, StatusPreviewWings.iconInset(closedHeight: size.height))
+        .padding(.trailing, StatusPreviewWings.textInset(closedHeight: size.height))
         .frame(width: size.width, height: size.height)
-        .offset(y: contentVerticalOffset)
+        .offset(x: horizontalOffset, y: contentVerticalOffset)
     }
 
     private var brightnessSymbolName: String {
@@ -628,6 +714,7 @@ private struct VolumeStatusView: View {
     let showsLine: Bool
     let showsPercent: Bool
     let size: CGSize
+    var horizontalOffset: CGFloat = 0
 
     private var clampedVolume: Double {
         isMuted ? 0 : min(max(volume, 0), 1)
@@ -669,16 +756,16 @@ private struct VolumeStatusView: View {
                     .frame(width: lineWidth, height: 20)
                 } else if showsPercent {
                     Text("\(percentage)")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(Font(StatusPreviewWings.percentFont))
                         .foregroundStyle(.white.opacity(0.9))
-                        .monospacedDigit()
-                        .frame(width: 30, alignment: .trailing)
+                        .fixedSize()
                 }
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.leading, StatusPreviewWings.iconInset(closedHeight: size.height))
+        .padding(.trailing, StatusPreviewWings.textInset(closedHeight: size.height))
         .frame(width: size.width, height: size.height)
-        .offset(y: contentVerticalOffset)
+        .offset(x: horizontalOffset, y: contentVerticalOffset)
     }
 
     private var volumeSymbolName: String {

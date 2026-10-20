@@ -12,6 +12,9 @@ struct NetworkStatusView: View {
     let event: NetworkStatusEvent?
     let size: CGSize
     let isExpanded: Bool
+    /// Closed: the gap beside each icon, and how far the island sits right of center.
+    var closedInset: CGFloat = 12
+    var closedOffset: CGFloat = 0
 
     @State private var presentationID = 0
 
@@ -44,7 +47,7 @@ struct NetworkStatusView: View {
                 .transition(.opacity.combined(with: .offset(y: 6)))
             }
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, isExpanded ? 12 : closedInset)
         .frame(width: size.width, height: size.height, alignment: .top)
         .overlay(alignment: .topTrailing) {
             if !isExpanded {
@@ -52,10 +55,11 @@ struct NetworkStatusView: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(content.color.opacity(0.82))
                     .frame(width: 22, height: 22)
-                    .padding(.trailing, 12)
+                    .padding(.trailing, closedInset)
                     .transition(.opacity)
             }
         }
+        .offset(x: isExpanded ? 0 : closedOffset)
         .animation(.easeInOut(duration: 0.2), value: isExpanded)
         .onAppear {
             presentationID += 1

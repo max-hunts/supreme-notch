@@ -72,6 +72,19 @@ struct IslandContainerView<Content: View>: View {
     static var canvasWidth: CGFloat { IslandCanvas.width }
 }
 
+extension View {
+    /// Keeps the island's two edges moving together while it changes width. A centered
+    /// view that changes width also changes position, and the position follows whatever
+    /// animation triggered the change (a tab swipe's short curve) while the width follows
+    /// the island's spring, so one edge would lead and the other lag. On a canvas-wide
+    /// frame under the island's own animation, both follow the spring.
+    func symmetricIslandResize(width: CGFloat, offset: CGFloat, animation: Animation) -> some View {
+        frame(width: IslandCanvas.width)
+            .animation(animation, value: width)
+            .animation(animation, value: offset)
+    }
+}
+
 /// Shared with the window controller, which cannot name the generic view's static.
 enum IslandCanvas {
     static let width: CGFloat = 616

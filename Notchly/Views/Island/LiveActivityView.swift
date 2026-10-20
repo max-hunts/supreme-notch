@@ -8,6 +8,7 @@
 
 import Combine
 import SwiftUI
+import AppKit
 
 nonisolated struct LiveActivity: Equatable {
     enum Kind: Equatable {
@@ -30,6 +31,7 @@ final class LiveActivityModel: ObservableObject {
     private var dismissedMeeting: UpcomingMeeting?
     private var cancellables = Set<AnyCancellable>()
     private var tickTask: Task<Void, Never>?
+    private var digitTask: Task<Void, Never>?
 
     init(settingsManager: SettingsManager, calendar: CalendarGlanceManager) {
         self.settingsManager = settingsManager
@@ -72,7 +74,20 @@ final class LiveActivityModel: ObservableObject {
     private func scheduleTick(for meeting: UpcomingMeeting?, now: Date) {
         tickTask?.cancel()
         tickTask = nil
+        digitTask?.cancel()
+        digitTask = nil
         guard let meeting, meeting.start > now else { return }
+
+        // The countdown draws itself, so the island never hears it go from 10:00 to 9:59.
+        // Tell it then, so the countdown's wing narrows by a digit.
+        let digitDrop = meeting.start.addingTimeInterval(-600)
+        if digitDrop > now {
+            digitTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(for: .seconds(digitDrop.timeIntervalSince(Date()) + 0.1))
+                guard !Task.isCancelled else { return }
+                self?.objectWillChange.send()
+            }
+        }
 
         tickTask = Task { @MainActor [weak self] in
             try? await Task.sleep(for: .seconds(max(0.5, meeting.start.timeIntervalSince(Date()) + 0.2)))
@@ -83,70 +98,108 @@ final class LiveActivityModel: ObservableObject {
 }
 
 /// The closed-notch content for a live activity: an icon and title in the left wing, a
-/// countdown in the right wing. The space over the camera notch stays empty.
+/// countdown in the right wing. The space over the camera notch stays empty. Each wing is
+/// only as wide as its content, and the title is capped so the island fits its window.
 struct LiveActivityWingsView: View {
     let activity: LiveActivity
     let size: CGSize
-    let notchWidth: CGFloat
+    var horizontalOffset: CGFloat = 0
     let hoverOffsetY: CGFloat
 
-    private static let padding: CGFloat = 12
+    static let titleFont = NSFont.systemFont(ofSize: 12, weight: .semibold)
+    static let countdownFont = NSFont.monospacedDigitSystemFont(ofSize: 12.5, weight: .semibold)
+    static let iconSize: CGFloat = 16
+    static let iconSpacing: CGFloat = 6
+    static let maxTitleWidth: CGFloat = 90
+
+    static func inset(closedHeight: CGFloat) -> CGFloat {
+        ClosedWings.inset(closedHeight: closedHeight, contentHeight: countdownFont.pointSize)
+    }
+
+    static func titleWidth(_ activity: LiveActivity) -> CGFloat {
+        min(ClosedWings.textWidth(activity.title, font: titleFont), maxTitleWidth)
+    }
+
+    static func wingWidths(
+        for activity: LiveActivity,
+        closedHeight: CGFloat,
+        cameraHousingInset: CGFloat
+    ) -> (left: CGFloat, right: CGFloat) {
+        let inset = inset(closedHeight: closedHeight)
+        let left = iconSize + iconSpacing + titleWidth(activity)
+        let right = ClosedWings.countdownWidth(until: activity.date, font: countdownFont)
+        return (
+            ClosedWings.width(content: left, inset: inset, cameraHousingInset: cameraHousingInset),
+            ClosedWings.width(content: right, inset: inset, cameraHousingInset: cameraHousingInset)
+        )
+    }
 
     var body: some View {
-        let wingWidth = max(24, (size.width - notchWidth) / 2 - Self.padding - 6)
-
-        HStack(spacing: 0) {
-            HStack(spacing: 6) {
-                leadingIcon
-                    .frame(width: 16, height: 16)
+        let inset = Self.inset(closedHeight: size.height)
+        ClosedWingsView(
+            size: size,
+            leadingInset: inset,
+            trailingInset: inset,
+            horizontalOffset: horizontalOffset,
+            hoverOffsetY: hoverOffsetY
+        ) {
+            HStack(spacing: Self.iconSpacing) {
+                Self.leadingIcon
+                    .frame(width: Self.iconSize, height: Self.iconSize)
                 Text(verbatim: activity.title)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(Font(Self.titleFont))
                     .foregroundStyle(.white.opacity(0.92))
                     .lineLimit(1)
                     .truncationMode(.tail)
+                    .frame(width: Self.titleWidth(activity), alignment: .leading)
             }
-            .frame(width: wingWidth, alignment: .leading)
-            .clipped()
-
-            Spacer(minLength: 0)
-
-            trailing
-                .frame(width: wingWidth, alignment: .trailing)
+        } trailing: {
+            Self.countdown(until: activity.date)
         }
-        .padding(.horizontal, Self.padding)
-        .frame(width: size.width, height: size.height)
-        .offset(y: hoverOffsetY)
     }
 
-    fileprivate var leadingIcon: some View {
+    fileprivate static var leadingIcon: some View {
         Image(systemName: "calendar")
             .font(.system(size: 12, weight: .semibold))
             .foregroundStyle(tint)
     }
 
-    fileprivate var trailing: some View {
-        Text(timerInterval: Date()...max(Date(), activity.date), countsDown: true, showsHours: false)
-            .font(.system(size: 12.5, weight: .semibold).monospacedDigit())
+    fileprivate static func countdown(until date: Date) -> some View {
+        Text(timerInterval: Date()...max(Date(), date), countsDown: true, showsHours: false)
+            .font(Font(countdownFont))
             .foregroundStyle(tint)
             .lineLimit(1)
+            .fixedSize()
     }
 
-    private var tint: Color {
+    private static var tint: Color {
         Color(red: 1.0, green: 0.42, blue: 0.4)
     }
 }
 
-/// The compact form for the music player's closed wings: icon and countdown only, in
-/// place of the waveform. The album art stays in the left wing.
+/// The compact form for the music player's right wing: icon and countdown only, in place
+/// of the status ring. The album art keeps the left wing.
 struct LiveActivityBadge: View {
     let activity: LiveActivity
 
+    static let iconSize: CGFloat = 14
+    static let spacing: CGFloat = 5
+
+    static func wingWidth(for activity: LiveActivity, closedHeight: CGFloat, cameraHousingInset: CGFloat) -> CGFloat {
+        let content = iconSize + spacing
+            + ClosedWings.countdownWidth(until: activity.date, font: LiveActivityWingsView.countdownFont)
+        return ClosedWings.width(
+            content: content,
+            inset: LiveActivityWingsView.inset(closedHeight: closedHeight),
+            cameraHousingInset: cameraHousingInset
+        )
+    }
+
     var body: some View {
-        let wings = LiveActivityWingsView(activity: activity, size: .zero, notchWidth: 0, hoverOffsetY: 0)
-        HStack(spacing: 5) {
-            wings.leadingIcon
-                .frame(width: 14, height: 14)
-            wings.trailing
+        HStack(spacing: Self.spacing) {
+            LiveActivityWingsView.leadingIcon
+                .frame(width: Self.iconSize, height: Self.iconSize)
+            LiveActivityWingsView.countdown(until: activity.date)
         }
         .fixedSize()
     }

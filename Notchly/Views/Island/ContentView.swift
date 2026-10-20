@@ -158,6 +158,11 @@ struct ContentView: View {
         .onChange(of: wingWatcherWidth) { _, width in
             wingWatcher.configure(screen: currentScreen, islandWidth: width)
         }
+        #if DEBUG
+        .onReceive(NotificationCenter.default.publisher(for: WidthCheck.openIsland)) { _ in
+            withAnimation(animation) { status = .opened }
+        }
+        #endif
         .onChange(of: isPointerInsideIsland || status == .opened, initial: true) { _, inUse in
             InteractionActivity.shared.setActive(inUse)
         }

@@ -21,8 +21,16 @@ extension ContentView {
 
     var islandContainer: some View {
         let leftOnly = usesBatterySideWing
+        let liveActivityWings = status == .closed && !tucksWings
+            ? closedLiveActivity.map {
+                LiveActivityWingsView.wingWidths(for: $0, closedHeight: closedHeight, cameraHousingInset: cameraHousingInset)
+            }
+            : nil
         let containerSize = leftOnly ? batterySideWingSize
-            : (usesIdleNotchSize ? idleNotchSize : layout.islandSize)
+            : liveActivityWings.map { CGSize(width: layout.idleWidth + $0.left + $0.right, height: closedHeight) }
+            ?? (usesIdleNotchSize ? idleNotchSize : layout.islandSize)
+        let containerOffset = leftOnly ? batterySideWingOffset
+            : liveActivityWings.map { ($0.right - $0.left) / 2 } ?? 0
         let compactContentSize = usesIdleNotchSize ? idleNotchSize : layout.closedSize
 
         return IslandContainerView(
@@ -30,13 +38,13 @@ extension ContentView {
             cornerRadius: layout.cornerRadius,
             spacing: layout.spacing,
             shadowOpacity: status == .opened || status == .popping ? 0.2 : 0,
-            horizontalOffset: leftOnly ? batterySideWingOffset : 0
+            horizontalOffset: containerOffset
         ) {
             if status == .closed, let liveActivity = closedLiveActivity {
                 LiveActivityWingsView(
                     activity: liveActivity,
-                    size: compactContentSize,
-                    notchWidth: configuredIdleIslandWidth,
+                    size: liveActivityWings == nil ? compactContentSize : containerSize,
+                    horizontalOffset: liveActivityWings == nil ? 0 : containerOffset,
                     hoverOffsetY: hoverOffsetY
                 )
                 .opacity(tucksWings ? 0 : 1)
@@ -142,6 +150,7 @@ extension ContentView {
         .animation(.smooth(duration: 0.22, extraBounce: 0), value: isHovered)
         .animation(animation, value: usesIdleNotchSize)
         .animation(.smooth(duration: 0.4, extraBounce: 0), value: liveActivityModel.activity)
+        .symmetricIslandResize(width: containerSize.width, offset: containerOffset, animation: animation)
         .onTapGesture {
             // A click opens the notch. Once open, clicks on empty space do nothing; it
             // closes when the pointer leaves, like the music player.

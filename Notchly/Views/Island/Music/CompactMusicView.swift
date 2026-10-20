@@ -9,8 +9,8 @@ import SwiftUI
 import AppKit
 
 /// The closed music island. The artwork sits in a wing left of the camera, placed like the
-/// usage bars, and the status ring sits right of it, as when no music plays. With the
-/// battery turned off the waveform takes the ring's place.
+/// usage bars, and the status ring sits right of it, as when no music plays. A meeting
+/// countdown takes the ring's place, and so does the waveform with the battery turned off.
 struct CompactMusicView: View {
     let artwork: NSImage?
     let waveformColor: Color
@@ -18,7 +18,7 @@ struct CompactMusicView: View {
     let size: CGSize
     let hoverOffsetY: CGFloat
     let skipIndicator: String?
-    /// Shown in place of the waveform while an agent works or a meeting is near.
+    /// Shown in place of the ring while a meeting is near.
     var liveActivity: LiveActivity? = nil
     var micMuted = false
     /// The ring right of the camera; nil shows the waveform there instead.
@@ -41,24 +41,31 @@ struct CompactMusicView: View {
         return inset + artwork + mic + inset - cameraHousingInset
     }
 
+    static let waveformHeight: CGFloat = 18
+
+    static func waveformInset(closedHeight: CGFloat) -> CGFloat {
+        ClosedWings.inset(closedHeight: closedHeight, contentHeight: waveformHeight)
+    }
+
     /// The wing right of the camera when it holds the waveform instead of the ring.
     static func waveformWingWidth(
         closedHeight: CGFloat,
         cameraHousingInset: CGFloat = CompactBatteryView.defaultCameraHousingInset
     ) -> CGFloat {
-        let inset = CompactBatteryView.ringOuterInset(closedHeight: closedHeight)
-        return inset + waveformWidth + inset - cameraHousingInset
+        ClosedWings.width(
+            content: waveformWidth,
+            inset: waveformInset(closedHeight: closedHeight),
+            cameraHousingInset: cameraHousingInset
+        )
+    }
+
+    private var trailingInset: CGFloat {
+        if liveActivity != nil { return LiveActivityWingsView.inset(closedHeight: size.height) }
+        if statusRing != nil { return CompactBatteryView.ringOuterInset(closedHeight: size.height) }
+        return Self.waveformInset(closedHeight: size.height)
     }
 
     var body: some View {
-        if let liveActivity {
-            liveActivityBody(liveActivity)
-        } else {
-            wingsBody
-        }
-    }
-
-    private var wingsBody: some View {
         let artworkSize = CompactBatteryView.barsHeight(closedHeight: size.height)
         return HStack(spacing: 0) {
             HStack(spacing: CompactBatteryView.leftWingSpacing) {
@@ -73,7 +80,10 @@ struct CompactMusicView: View {
 
             Spacer(minLength: 0)
 
-            if let statusRing {
+            if let liveActivity {
+                LiveActivityBadge(activity: liveActivity)
+                    .transition(.opacity)
+            } else if let statusRing {
                 ZStack {
                     statusRing
                         .opacity(skipIndicator == nil ? 1 : 0.18)
@@ -88,32 +98,13 @@ struct CompactMusicView: View {
                 .animation(.easeInOut(duration: 0.18), value: skipIndicator)
             } else {
                 MusicWaveformView(isPlaying: isPlaying, color: waveformColor, skipIndicator: skipIndicator)
-                    .frame(width: Self.waveformWidth, height: 18)
+                    .frame(width: Self.waveformWidth, height: Self.waveformHeight)
             }
         }
-        .padding(.trailing, CompactBatteryView.ringOuterInset(closedHeight: size.height))
+        .padding(.trailing, trailingInset)
         .frame(width: size.width, height: size.height)
         .offset(x: horizontalOffset, y: hoverOffsetY)
         .animation(.smooth(duration: 0.25, extraBounce: 0), value: micMuted)
-    }
-
-    private func liveActivityBody(_ liveActivity: LiveActivity) -> some View {
-        HStack(spacing: 10) {
-            artworkView(size: 22)
-
-            Spacer()
-
-            if micMuted {
-                MutedMicIndicator()
-                    .transition(.opacity)
-            }
-
-            LiveActivityBadge(activity: liveActivity)
-                .transition(.opacity)
-        }
-        .padding(.horizontal, 12)
-        .frame(width: size.width, height: size.height)
-        .offset(y: hoverOffsetY)
     }
 
     @ViewBuilder
