@@ -18,7 +18,7 @@ struct AIUsageSettingsView: View {
                 VStack(spacing: 0) {
                     SettingsToggleRow(
                         title: "Usage Tab",
-                        subtitle: "Shows Claude 5-hour, weekly and per-model limits, and Codex weekly usage, in the opened notch.",
+                        subtitle: "Shows Claude 5-hour, weekly and per-model limits, and Codex 5-hour and weekly usage, in the opened notch.",
                         isOn: $settingsManager.showUsageTab
                     )
 
@@ -173,17 +173,22 @@ private struct UsageBarChoices: View {
                     .foregroundStyle(.secondary)
             }
 
-            HStack(spacing: 18) {
-                ForEach(UsageLimitKind.allCases) { kind in
-                    Toggle(kind.title, isOn: Binding(
-                        get: { settingsManager.showsUsageBar(kind) },
-                        set: { settingsManager.setShowsUsageBar(kind, $0) }
-                    ))
-                    .toggleStyle(.checkbox)
-                    .font(.system(size: 12, weight: .medium))
-                    .help(Text(Self.help(for: kind)))
+            // Claude's limits on one row, Codex's on the next.
+            VStack(alignment: .leading, spacing: 8) {
+                ForEach([false, true], id: \.self) { codex in
+                    HStack(spacing: 18) {
+                        ForEach(UsageLimitKind.allCases.filter { $0.isCodex == codex }) { kind in
+                            Toggle(kind.title, isOn: Binding(
+                                get: { settingsManager.showsUsageBar(kind) },
+                                set: { settingsManager.setShowsUsageBar(kind, $0) }
+                            ))
+                            .toggleStyle(.checkbox)
+                            .font(.system(size: 12, weight: .medium))
+                            .help(Text(Self.help(for: kind)))
+                        }
+                        Spacer(minLength: 0)
+                    }
                 }
-                Spacer(minLength: 0)
             }
         }
     }
@@ -193,6 +198,7 @@ private struct UsageBarChoices: View {
         case .fiveHour: return "Claude's 5-hour session limit"
         case .weekly: return "Claude's weekly limit across all models"
         case .modelWeekly: return "Claude's weekly limit for Fable"
+        case .codexFiveHour: return "Codex's 5-hour limit, on plans that have one"
         case .codexWeekly: return "Codex's weekly limit"
         }
     }

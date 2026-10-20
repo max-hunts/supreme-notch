@@ -25,7 +25,7 @@ BetterNotch is a fork of [Notchly](https://github.com/Notchly/Notchly) (MIT), re
 The closed notch stays out of the way. The camera sits in the middle, with a small wing on each side:
 
 - **Right wing, the status ring.** One glyph shows three things. The outer arc is your battery level. The center shows your network: Wi-Fi bars, an Ethernet plug, or offline. The four dots along the bottom show output volume.
-- **Left wing, usage bars.** One short bar for each subscription limit: Claude's 5-hour, weekly and per-model limits, plus Codex. The colored part is what's left, so a fresh limit is a full bar, and it shrinks and warms in color as you use it. They refresh every 5 minutes. **Settings → AI Usage** switches between two bar styles.
+- **Left wing, usage bars.** One short bar for each subscription limit: Claude's 5-hour, weekly and per-model limits, plus Codex's weekly limit and, on plans that have one, its 5-hour limit. The colored part is what's left, so a fresh limit is a full bar, and it shrinks and warms in color as you use it. They refresh every 5 minutes. **Settings → AI Usage** switches between two bar styles.
 - **Muted mic.** A red slashed mic appears next to the camera whenever your microphone is muted.
 
 Each glyph sits as far from the camera as from the notch's edge. If yours sits too close to the camera or too far from it, **Settings → General → Space Beside Camera** moves both sides in or out, with a Reset button to go back to the default.
@@ -50,7 +50,7 @@ Colors follow how much is used. Claude's run cold to hot, from blue through cyan
   <img src="docs/images/usage-bar-styles.png" width="560" alt="The two usage bar styles in settings: Color hangs, where what's left is a colored capsule, and Gray rises, where what's used is a gray capsule">
 </p>
 
-Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom. The same page chooses which limits get a bar beside the camera (5-hour, weekly, Fable weekly, Codex weekly); the Usage tab always shows them all.
+Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom. The same page chooses which limits get a bar beside the camera (5-hour, weekly, Fable weekly, Codex 5-hour, Codex weekly); the Usage tab always shows them all.
 
 ## Opened notch
 
@@ -64,7 +64,7 @@ The top shows a large status ring with the battery percentage, plus a mic mute b
 
 <table>
   <tr>
-    <td><img src="docs/images/tab-usage.png" alt="Usage tab: Claude 5-hour, weekly and model limits, plus Codex, with reset times"></td>
+    <td><img src="docs/images/tab-usage.png" alt="Usage tab: Claude 5-hour, weekly and model limits, plus Codex 5-hour and weekly, with reset times"></td>
     <td><img src="docs/images/tab-system.png" alt="System tab: CPU, memory and disk rings and a 5-minute network chart"></td>
   </tr>
   <tr>

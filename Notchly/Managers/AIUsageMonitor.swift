@@ -15,7 +15,9 @@ import Foundation
 
 /// Which limit a usage window is, so each can be shown or hidden on its own.
 nonisolated enum UsageLimitKind: String, CaseIterable, Identifiable, Sendable {
-    case fiveHour, weekly, modelWeekly, codexWeekly
+    case fiveHour, weekly, modelWeekly, codexFiveHour, codexWeekly
+
+    var isCodex: Bool { self == .codexFiveHour || self == .codexWeekly }
 
     var id: String { rawValue }
 
@@ -24,6 +26,7 @@ nonisolated enum UsageLimitKind: String, CaseIterable, Identifiable, Sendable {
         case .fiveHour: return "5-hour"
         case .weekly: return "Weekly"
         case .modelWeekly: return "Fable weekly"
+        case .codexFiveHour: return "Codex 5-hour"
         case .codexWeekly: return "Codex weekly"
         }
     }
@@ -40,7 +43,10 @@ nonisolated struct UsageWindow: Equatable, Identifiable {
 
 nonisolated struct AIUsageSnapshot: Equatable {
     var claude: [UsageWindow] = []
+    /// Codex's weekly window.
     var codex: UsageWindow?
+    /// Codex's rolling 5-hour window; only some plans have one.
+    var codexFiveHour: UsageWindow?
     var claudeError: String?
     var codexError: String?
     var fetchedAt = Date()
@@ -70,14 +76,23 @@ nonisolated struct AIUsageSnapshot: Equatable {
         snapshot.claudeError = (root["claude_error"] as? String).flatMap(Self.shortError)
 
         if let codex = root["codex"] as? [String: Any] {
-            snapshot.codex = window(codex["weekly"], label: "Codex", kind: .codexWeekly)
+            let hasFiveHour = codex["five_hour"] is [String: Any]
+            snapshot.codexFiveHour = window(codex["five_hour"], label: "Codex 5h", kind: .codexFiveHour)
+            // Just "Codex" when the plan has only the weekly window, as before.
+            snapshot.codex = window(codex["weekly"], label: hasFiveHour ? "Codex wk" : "Codex", kind: .codexWeekly)
             snapshot.codexError = (codex["error"] as? String).flatMap(Self.shortError)
         }
 
-        guard !snapshot.claude.isEmpty || snapshot.codex != nil || snapshot.claudeError != nil || snapshot.codexError != nil else {
+        guard !snapshot.claude.isEmpty || !snapshot.codexWindows.isEmpty
+                || snapshot.claudeError != nil || snapshot.codexError != nil else {
             return nil
         }
         return snapshot
+    }
+
+    /// Codex's windows in display order: 5-hour, then weekly.
+    var codexWindows: [UsageWindow] {
+        [codexFiveHour, codex].compactMap { $0 }
     }
 
     private static func date(_ value: Any?) -> Date? {
@@ -126,7 +141,7 @@ final class AIUsageMonitor: ObservableObject {
     var rowCount: Int {
         guard case let .loaded(snapshot) = state else { return 1 }
         let claudeRows = snapshot.claude.isEmpty ? (snapshot.claudeError == nil ? 0 : 1) : snapshot.claude.count
-        let codexRows = snapshot.codex != nil || snapshot.codexError != nil ? 1 : 0
+        let codexRows = snapshot.codexWindows.isEmpty ? (snapshot.codexError == nil ? 0 : 1) : snapshot.codexWindows.count
         return max(1, claudeRows + codexRows)
     }
 

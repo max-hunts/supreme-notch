@@ -6,13 +6,13 @@ use serde_json::{json, Value};
 
 use crate::api::ApiClient;
 use crate::config::Config;
-use crate::models::{AggregatedUsage, CodexStatus, ScopedWindow, UsageResponse, WindowUsage};
+use crate::models::{AggregatedUsage, CodexStatus, CodexUsage, ScopedWindow, UsageResponse};
 
 pub const REFRESH: Duration = Duration::from_secs(2);
 
 pub enum Update {
     Claude(Result<Value>),
-    Codex(Result<WindowUsage>),
+    Codex(Result<CodexUsage>),
 }
 
 #[derive(Default)]
@@ -33,8 +33,9 @@ impl Snapshot {
                 self.claude_updated_at = Some(now);
             }
             Update::Claude(Err(e)) => self.claude_error = Some(e.to_string()),
-            Update::Codex(Ok(weekly)) => {
-                self.codex.weekly = Some(weekly);
+            Update::Codex(Ok(usage)) => {
+                self.codex.weekly = usage.weekly;
+                self.codex.five_hour = usage.five_hour;
                 self.codex.error = None;
                 self.codex.updated_at = Some(now);
             }
@@ -141,6 +142,7 @@ impl Monitor {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::WindowUsage;
 
     #[test]
     fn provider_failures_preserve_other_provider_and_mark_stale() {
@@ -148,9 +150,12 @@ mod tests {
         snapshot.apply(Update::Claude(Ok(
             json!({"five_hour": {"utilization": 12}, "seven_day": {"utilization": 34}}),
         )));
-        snapshot.apply(Update::Codex(Ok(WindowUsage {
-            utilization: 13.0,
-            resets_at: None,
+        snapshot.apply(Update::Codex(Ok(CodexUsage {
+            weekly: Some(WindowUsage {
+                utilization: 13.0,
+                resets_at: None,
+            }),
+            five_hour: None,
         })));
         let updated = snapshot.codex.updated_at.clone();
         snapshot.apply(Update::Codex(Err(anyhow::anyhow!("auth 401"))));
@@ -158,13 +163,20 @@ mod tests {
         assert_eq!(snapshot.codex.updated_at, updated);
         assert_eq!(snapshot.aggregated().five_hour_util, 12.0);
         snapshot.apply(Update::Claude(Err(anyhow::anyhow!("http 403"))));
-        snapshot.apply(Update::Codex(Ok(WindowUsage {
-            utilization: 14.0,
-            resets_at: None,
+        snapshot.apply(Update::Codex(Ok(CodexUsage {
+            weekly: Some(WindowUsage {
+                utilization: 14.0,
+                resets_at: None,
+            }),
+            five_hour: Some(WindowUsage {
+                utilization: 61.0,
+                resets_at: None,
+            }),
         })));
         assert!(snapshot.codex.error.is_none());
         assert!(snapshot.claude_error.is_some());
         assert_eq!(snapshot.json()["codex"]["weekly"]["utilization"], 14.0);
+        assert_eq!(snapshot.json()["codex"]["five_hour"]["utilization"], 61.0);
     }
 
     #[test]

@@ -99,7 +99,8 @@ enum ReadmeImageRenderer {
             UsageWindow(label: "Week", percent: 61, resetsAt: now.addingTimeInterval(3 * 86400 + 5 * 3600)),
             UsageWindow(label: "Fable", kind: .modelWeekly, percent: 18, resetsAt: now.addingTimeInterval(3 * 86400 + 5 * 3600))
         ]
-        usage.codex = UsageWindow(label: "Codex", kind: .codexWeekly, percent: 27, resetsAt: now.addingTimeInterval(5 * 86400))
+        usage.codexFiveHour = UsageWindow(label: "Codex 5h", kind: .codexFiveHour, percent: 46, resetsAt: now.addingTimeInterval(3 * 3600 + 1200))
+        usage.codex = UsageWindow(label: "Codex wk", kind: .codexWeekly, percent: 27, resetsAt: now.addingTimeInterval(5 * 86400))
         environment.aiUsageMonitor.previewLoad(usage)
 
         environment.agentEventManager.sessionTracker.previewLoad([

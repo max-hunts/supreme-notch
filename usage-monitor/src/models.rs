@@ -62,6 +62,9 @@ pub struct AggregatedUsage {
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct CodexStatus {
     pub weekly: Option<WindowUsage>,
+    /// The rolling 5-hour window; only some plans have one.
+    #[serde(default)]
+    pub five_hour: Option<WindowUsage>,
     pub error: Option<String>,
     pub updated_at: Option<String>,
 }
@@ -84,26 +87,49 @@ pub struct CodexWindow {
     pub reset_at: Option<i64>,
 }
 
+/// The Codex windows a plan has. Either may be missing: some plans have no 5-hour window.
+#[derive(Debug, Clone, Default)]
+pub struct CodexUsage {
+    pub weekly: Option<WindowUsage>,
+    pub five_hour: Option<WindowUsage>,
+}
+
+const WEEK_SECONDS: u64 = 604_800;
+const FIVE_HOURS_SECONDS: u64 = 18_000;
+
 impl CodexResponse {
-    pub fn weekly(self) -> anyhow::Result<WindowUsage> {
+    /// Picks each window by its length, since the plan decides which one is primary.
+    pub fn usage(self) -> anyhow::Result<CodexUsage> {
         let limits = self
             .rate_limit
-            .ok_or_else(|| anyhow::anyhow!("weekly limit unavailable"))?;
-        let window = [limits.primary_window, limits.secondary_window]
+            .ok_or_else(|| anyhow::anyhow!("Codex limits unavailable"))?;
+        let windows: Vec<CodexWindow> = [limits.primary_window, limits.secondary_window]
             .into_iter()
             .flatten()
-            .find(|w| w.limit_window_seconds == 604_800)
-            .ok_or_else(|| anyhow::anyhow!("weekly limit unavailable"))?;
-        if !window.used_percent.is_finite() || window.used_percent < 0.0 {
-            anyhow::bail!("invalid weekly usage");
+            .collect();
+        let pick = |seconds: u64| -> anyhow::Result<Option<WindowUsage>> {
+            let Some(window) = windows.iter().find(|w| w.limit_window_seconds == seconds) else {
+                return Ok(None);
+            };
+            if !window.used_percent.is_finite() || window.used_percent < 0.0 {
+                anyhow::bail!("invalid Codex usage");
+            }
+            Ok(Some(WindowUsage {
+                utilization: window.used_percent,
+                resets_at: window
+                    .reset_at
+                    .and_then(|t| chrono::DateTime::from_timestamp(t, 0))
+                    .map(|t| t.to_rfc3339()),
+            }))
+        };
+        let usage = CodexUsage {
+            weekly: pick(WEEK_SECONDS)?,
+            five_hour: pick(FIVE_HOURS_SECONDS)?,
+        };
+        if usage.weekly.is_none() && usage.five_hour.is_none() {
+            anyhow::bail!("Codex limits unavailable");
         }
-        Ok(WindowUsage {
-            utilization: window.used_percent,
-            resets_at: window
-                .reset_at
-                .and_then(|t| chrono::DateTime::from_timestamp(t, 0))
-                .map(|t| t.to_rfc3339()),
-        })
+        Ok(usage)
     }
 }
 
@@ -123,30 +149,53 @@ mod tests {
             (short, week.clone()),
             (week, json!(null)),
         ] {
+            let has_short = !primary.is_null() && primary["limit_window_seconds"] == 18000
+                || !secondary.is_null() && secondary["limit_window_seconds"] == 18000;
             let response: CodexResponse = serde_json::from_value(json!({"rate_limit": {
                 "primary_window": primary, "secondary_window": secondary
             }}))
             .unwrap();
-            let weekly = response.weekly().unwrap();
+            let usage = response.usage().unwrap();
+            let weekly = usage.weekly.unwrap();
             assert_eq!(weekly.utilization, 13.0);
             assert_eq!(
                 weekly.resets_at.as_deref(),
                 Some("2033-05-18T03:33:20+00:00")
             );
+            match usage.five_hour {
+                Some(five) => {
+                    assert!(has_short);
+                    assert_eq!(five.utilization, 99.0);
+                    assert_eq!(five.resets_at.as_deref(), Some("2030-03-17T17:46:40+00:00"));
+                }
+                None => assert!(!has_short),
+            }
         }
     }
 
     #[test]
-    fn missing_weekly_is_unavailable_not_zero() {
+    fn five_hour_alone_is_reported_without_weekly() {
+        let response: CodexResponse = serde_json::from_value(json!({"rate_limit": {
+            "primary_window": {"used_percent": 40, "limit_window_seconds": 18000}, "secondary_window": null
+        }}))
+        .unwrap();
+        let usage = response.usage().unwrap();
+        assert!(usage.weekly.is_none());
+        assert_eq!(usage.five_hour.unwrap().utilization, 40.0);
+    }
+
+    #[test]
+    fn missing_windows_are_unavailable_not_zero() {
         for payload in [
             json!({}),
             json!({"rate_limit": null}),
+            json!({"rate_limit": {"primary_window": null, "secondary_window": null}}),
             json!({"rate_limit": {
-                "primary_window": {"used_percent": 0, "limit_window_seconds": 18000}, "secondary_window": null
+                "primary_window": {"used_percent": 0, "limit_window_seconds": 3600}, "secondary_window": null
             }}),
         ] {
             let response: CodexResponse = serde_json::from_value(payload).unwrap();
-            assert!(response.weekly().is_err());
+            assert!(response.usage().is_err());
         }
     }
 

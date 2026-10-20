@@ -99,9 +99,10 @@ struct UsageTabView: View {
                         ForEach(snapshot.claude) { window in
                             row(window, now: context.date)
                         }
-                        if let codex = snapshot.codex {
-                            row(codex, now: context.date, tint: codexBlue)
-                        } else if let error = snapshot.codexError {
+                        ForEach(snapshot.codexWindows) { window in
+                            row(window, now: context.date, tint: codexBlue)
+                        }
+                        if snapshot.codexWindows.isEmpty, let error = snapshot.codexError {
                             UsageBarRow(label: "Codex", fraction: nil, reset: nil, error: error)
                         }
                     }
@@ -159,7 +160,7 @@ private struct UsageBarRow: View {
                 .font(.system(size: 11.5, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.75))
                 .lineLimit(1)
-                .frame(width: 56, alignment: .leading)
+                .frame(width: 60, alignment: .leading)
 
             if let fraction {
                 let tint = fraction >= 0.9 ? dangerRed : baseTint

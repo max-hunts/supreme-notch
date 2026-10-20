@@ -296,6 +296,7 @@ mod tests {
                     utilization: 13.0,
                     resets_at: None,
                 }),
+                five_hour: None,
                 error: Some("auth 401".into()),
                 updated_at: None,
             },

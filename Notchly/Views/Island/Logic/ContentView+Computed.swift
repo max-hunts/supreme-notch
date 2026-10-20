@@ -133,9 +133,9 @@ extension ContentView {
         var bars = snapshot.claude
             .filter { settingsManager.showsUsageBar($0.kind) }
             .map { UsageBar(id: $0.label, percent: $0.percent, scale: .claude) }
-        if let codex = snapshot.codex, settingsManager.showsUsageBar(.codexWeekly) {
-            bars.append(UsageBar(id: codex.label, percent: codex.percent, scale: .codex))
-        }
+        bars += snapshot.codexWindows
+            .filter { settingsManager.showsUsageBar($0.kind) }
+            .map { UsageBar(id: $0.label, percent: $0.percent, scale: .codex) }
         return bars
     }
 

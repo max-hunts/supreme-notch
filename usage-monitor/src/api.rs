@@ -5,7 +5,7 @@ use serde_json::Value;
 use tokio::runtime::Runtime;
 
 use crate::config::Config;
-use crate::models::{CodexResponse, WindowUsage};
+use crate::models::{CodexResponse, CodexUsage};
 
 const CODEX_USAGE_URL: &str = "https://chatgpt.com/backend-api/wham/usage";
 
@@ -77,7 +77,7 @@ impl ApiClient {
         })
     }
 
-    pub fn fetch_codex(&self) -> Result<WindowUsage> {
+    pub fn fetch_codex(&self) -> Result<CodexUsage> {
         let token = self
             .cfg
             .codex_access_token
@@ -107,7 +107,7 @@ impl ApiClient {
         url: &str,
         token: &str,
         account: &str,
-    ) -> Result<WindowUsage> {
+    ) -> Result<CodexUsage> {
         let token = token.trim().strip_prefix("Bearer ").unwrap_or(token.trim());
         let mut request = self
             .client
@@ -142,7 +142,7 @@ impl ApiClient {
             .json::<CodexResponse>()
             .await
             .map_err(|_| anyhow!("invalid Codex usage response"))?
-            .weekly()
+            .usage()
     }
 }
 
@@ -255,11 +255,12 @@ mod tests {
             ..Default::default()
         })
         .unwrap();
-        let weekly = api
+        let usage = api
             .runtime
             .block_on(api.fetch_codex_inner(&url, "Bearer test-token", "workspace-test"))
             .unwrap();
-        assert_eq!(weekly.utilization, 13.0);
+        assert_eq!(usage.weekly.unwrap().utilization, 13.0);
+        assert!(usage.five_hour.is_none());
         let request = server.join().unwrap();
         assert!(request.contains("authorization: bearer test-token\r\n"));
         assert!(request.contains("chatgpt-account-id: workspace-test\r\n"));
