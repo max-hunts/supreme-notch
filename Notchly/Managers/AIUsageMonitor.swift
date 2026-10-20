@@ -89,15 +89,17 @@ nonisolated struct AIUsageSnapshot: Equatable {
         return formatter.date(from: text)
     }
 
+    /// Nil for a provider that has no keys at all: it is simply not shown, so a Codex-only
+    /// or Claude-only setup has no error row for the other.
     private static func shortError(_ text: String) -> String? {
         let line = text.trimmingCharacters(in: .whitespacesAndNewlines)
             .components(separatedBy: .newlines).first ?? ""
         guard !line.isEmpty else { return nil }
-        if line.contains("401") || line.contains("403") || line.lowercased().contains("forbidden") {
-            return "Sign-in expired. Run claude-usage-monitor and press e."
-        }
         if line.lowercased().contains("not configured") {
-            return "Not set up in claude-usage-monitor"
+            return nil
+        }
+        if line.contains("401") || line.contains("403") || line.lowercased().contains("forbidden") {
+            return "Sign-in expired. Update the keys in Settings → AI Usage."
         }
         return String(line.prefix(80))
     }
@@ -249,6 +251,9 @@ final class AIUsageMonitor: ObservableObject {
             let message = errorText.replacingOccurrences(of: "Error: ", with: "")
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .components(separatedBy: .newlines).first ?? ""
+            if message.lowercased().contains("no credentials configured") {
+                return .failure(RunError(errorDescription: "Add your Claude or Codex keys in Settings → AI Usage"))
+            }
             return .failure(RunError(errorDescription: message.isEmpty ? "claude-usage-monitor exited with \(process.terminationStatus)" : String(message.prefix(100))))
         }
         return .success(Data(data))
