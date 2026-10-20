@@ -119,22 +119,24 @@ struct UsageBarsGlyph: View {
 
     private typealias Stop = (at: Double, red: Double, green: Double, blue: Double)
 
-    /// Cold to hot through green: blue, cyan, sea green, lime, amber, red.
+    /// Cold to hot through green: blue, cyan, sea green, lime, amber, orange, red.
+    /// Warm from just past half, so a limit doesn't look safe for most of its range.
     private static let claudeStops: [Stop] = [
         (0.00, 0.184, 0.357, 1.000),
-        (0.22, 0.122, 0.714, 0.949),
-        (0.42, 0.133, 0.827, 0.651),
-        (0.60, 0.651, 0.890, 0.235),
-        (0.78, 1.000, 0.690, 0.125),
-        (0.99, 0.910, 0.149, 0.227)
+        (0.12, 0.122, 0.714, 0.949),
+        (0.25, 0.133, 0.827, 0.651),
+        (0.40, 0.651, 0.890, 0.235),
+        (0.55, 1.000, 0.690, 0.125),
+        (0.70, 1.000, 0.450, 0.150),
+        (0.85, 0.910, 0.149, 0.227)
     ]
 
-    /// Green, yellow, orange, red.
+    /// Green, yellow, orange, red, with red from three quarters used.
     private static let codexStops: [Stop] = [
         (0.00, 0.30, 0.84, 0.44),
-        (0.60, 1.00, 0.84, 0.30),
-        (0.80, 1.00, 0.56, 0.22),
-        (0.99, 1.00, 0.27, 0.25)
+        (0.30, 1.00, 0.84, 0.30),
+        (0.50, 1.00, 0.56, 0.22),
+        (0.75, 1.00, 0.27, 0.25)
     ]
 
     /// At or over the limit.
