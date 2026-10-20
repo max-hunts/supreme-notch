@@ -34,7 +34,11 @@ Each glyph sits as far from the camera as from the notch's edge. If yours sits t
   <img src="docs/images/status-ring.png" width="580" alt="The status ring explained: outer arc is battery, center is network, four dots are volume; with Wi-Fi, weak Wi-Fi, charging, Ethernet and offline with low battery examples">
 </p>
 
-Charging color changes the moment you plug in or unplug.
+Charging color changes the moment you plug in or unplug. On power at 100%, the arc turns into fine green ticks. When macOS holds the charge below 100% to protect the battery, the ring shows it; **Settings → Battery** picks one of four styles (a calm teal arc by default, a limit marker, ticks for the rest, or a hollow arc).
+
+Turning the battery off in settings hides only the ring; the usage bars, muted mic and tabs stay.
+
+While music plays, the album artwork takes the left wing, spaced like the usage bars, and the status ring stays on the right. Meeting countdowns and the brightness, volume, Focus and network notices also use wings only as wide as what they show.
 
 <p align="center">
   <img src="docs/images/usage-colors.png" width="460" alt="Usage color scales for Claude and Codex">
