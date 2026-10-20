@@ -11,7 +11,10 @@ extension ContentView {
     @ViewBuilder
     var musicContainer: some View {
         let isWaveformActive = animationsEnabled && musicManager.isPlaying
-        let clippedWidth = max(0, layout.islandSize.width + layout.cornerRadius * 2)
+        let wings = usesMusicWings
+        let containerSize = wings ? musicWingSize : layout.islandSize
+        let containerOffset = wings ? musicWingOffset : 0
+        let clippedWidth = max(0, max(layout.islandSize.width, containerSize.width + abs(containerOffset) * 2) + layout.cornerRadius * 2)
         let agentEvent = displayedAgentEvent ?? agentEventManager.currentEvent
         let hasPendingAgentEvent =
             agentEvent != nil &&
@@ -24,7 +27,7 @@ extension ContentView {
         Group {
             if hasPendingAgentEvent {
                 AgentIslandFrame(
-                    size: layout.islandSize,
+                    size: containerSize,
                     cornerRadius: layout.cornerRadius,
                     spacing: layout.spacing,
                     isHovered: isHovered
@@ -52,12 +55,14 @@ extension ContentView {
                     }
                     .frame(width: layout.agentPreviewSize.width + layout.cornerRadius * 2, height: layout.agentPreviewSize.height, alignment: .top)
                 }
+                .offset(x: containerOffset)
             } else {
                 IslandContainerView(
-                    size: layout.islandSize,
+                    size: containerSize,
                     cornerRadius: layout.cornerRadius,
                     spacing: layout.spacing,
-                    shadowOpacity: status == .opened || status == .popping ? 0.2 : 0
+                    shadowOpacity: status == .opened || status == .popping ? 0.2 : 0,
+                    horizontalOffset: containerOffset
                 ) {
             if !hidesMusicContentDuringAgentReturn && !hasPendingAgentEvent && (status == .closed ||
                 status == .popping ||
@@ -68,11 +73,13 @@ extension ContentView {
                     artwork: musicManager.artworkImage,
                     waveformColor: musicManager.waveformColor,
                     isPlaying: isWaveformActive,
-                    size: layout.closedSize,
+                    size: closedLiveActivity == nil ? musicWingSize : layout.closedSize,
                     hoverOffsetY: hoverOffsetY,
                     skipIndicator: skipIndicator,
                     liveActivity: closedLiveActivity,
-                    micMuted: settingsManager.showMicMute && micMuteManager.isMuted
+                    micMuted: closedMicMuted,
+                    statusRing: settingsManager.showBattery ? closedStatusRing : nil,
+                    horizontalOffset: closedLiveActivity == nil ? musicWingOffset : 0
                 )
                 .animation(.smooth(duration: 0.4, extraBounce: 0), value: closedLiveActivity)
                 .opacity(tucksWings ? 0 : 1)
@@ -254,6 +261,8 @@ extension ContentView {
             animation,
             value: layout.cornerRadius
         )
+        .animation(animation, value: containerSize.width)
+        .animation(animation, value: containerOffset)
         .frame(width: clippedWidth, height: layout.islandSize.height)
         .clipped()
         .contentShape(RoundedRectangle(cornerRadius: layout.cornerRadius))

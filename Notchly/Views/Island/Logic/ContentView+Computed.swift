@@ -153,6 +153,53 @@ extension ContentView {
         CGSize(width: layout.idleWidth + batterySideWingWidth + batteryLeftWingWidth, height: closedHeight)
     }
 
+    /// The closed notch's status ring, for the music island's right wing.
+    var closedStatusRing: StatusRingGlyph {
+        StatusRingGlyph(
+            batteryLevel: batteryManager.batteryLevel,
+            isCharging: batteryManager.isCharging,
+            lowBatteryThreshold: settingsManager.lowBatteryThreshold,
+            network: networkStatusManager.glyphState,
+            volume: musicManager.outputVolume,
+            isMuted: musicManager.isOutputMuted,
+            height: CompactBatteryView.glyphHeight(closedHeight: closedHeight),
+            isLowPowerMode: batteryManager.isLowPowerMode,
+            isChargeOnHold: batteryManager.isChargeOnHold,
+            chargeHoldStyle: settingsManager.chargeHoldStyle
+        )
+    }
+
+    /// Closed music: the artwork's wing left of the camera.
+    var musicLeftWingWidth: CGFloat {
+        CompactMusicView.leftWingWidth(
+            micMuted: closedMicMuted,
+            closedHeight: closedHeight,
+            cameraHousingInset: cameraHousingInset
+        )
+    }
+
+    /// Closed music: the ring's wing right of the camera, or the waveform's with the
+    /// battery turned off.
+    var musicRightWingWidth: CGFloat {
+        settingsManager.showBattery
+            ? batterySideWingWidth
+            : CompactMusicView.waveformWingWidth(closedHeight: closedHeight, cameraHousingInset: cameraHousingInset)
+    }
+
+    var musicWingSize: CGSize {
+        CGSize(width: layout.idleWidth + musicLeftWingWidth + musicRightWingWidth, height: closedHeight)
+    }
+
+    var musicWingOffset: CGFloat {
+        (musicRightWingWidth - musicLeftWingWidth) / 2
+    }
+
+    /// The closed music island hugs the camera with its two wings, unless a meeting or
+    /// agent badge needs the wider island or the wings are tucked.
+    var usesMusicWings: Bool {
+        status == .closed && closedLiveActivity == nil && !tucksWings
+    }
+
     var agentTopClearance: CGFloat {
         AgentActivityView.notchClearance(
             closedHeight: closedHeight,
