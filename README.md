@@ -129,7 +129,7 @@ Short notices that slide out of the notch and go away on their own:
 ## Requirements
 
 - A Mac with a notch, on macOS 14.6 or newer.
-- For the usage bars: [claude-usage-monitor](https://github.com/max-hunts/claude-usage-monitor), which is bundled inside the app. Enter your keys in **Settings → AI Usage**; they are stored in your Keychain.
+- For the usage bars: claude-usage-monitor, a small Rust tool whose source is in `usage-monitor/` and which is bundled inside the app. Enter your keys in **Settings → AI Usage**; they are stored in your Keychain.
 
 ## Install
 
@@ -156,8 +156,8 @@ open Notchly.xcodeproj
 A Release build needs the usage monitor copied into the app after export, then the app re-signed:
 
 ```sh
-cargo build --release --manifest-path ../claude-usage-monitor/Cargo.toml
-cp ../claude-usage-monitor/target/release/claude-usage-monitor BetterNotch.app/Contents/Helpers/
+cargo build --release --manifest-path usage-monitor/Cargo.toml
+cp usage-monitor/target/release/claude-usage-monitor BetterNotch.app/Contents/Helpers/
 codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" BetterNotch.app/Contents/Helpers/claude-usage-monitor
 codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" \
   --preserve-metadata=entitlements,requirements,flags,runtime BetterNotch.app
@@ -169,7 +169,7 @@ The `scripts` folder has the rest of the workflow, all for a Mac with Xcode:
 - `scripts/release.sh VERSION BUILD` does the same, then notarizes and staples it and writes the release zip. It needs a notarytool keychain profile (`NOTARY_PROFILE`, default `max-hunt-notary`).
 - `scripts/render-readme-glyphs.sh` redraws the status ring, closed notch and usage color images in `docs/images`.
 
-Both build scripts expect a [claude-usage-monitor](https://github.com/max-hunts/claude-usage-monitor) checkout at `~/Desktop/claude-usage-monitor`, or wherever `USAGE_MONITOR_DIR` points.
+Both build scripts build the usage monitor from `usage-monitor/` (or wherever `USAGE_MONITOR_DIR` points), so they need Rust's `cargo`. The folder also has the tool's own terminal app and SwiftBar plugin; see `usage-monitor/README.md`.
 
 To check the layout after a change, run `scripts/layout-check.sh`. It shows sample alerts in the real island, saves a picture of each, and fails if the buttons are not 12 pt from the island's edges or the text sits too far above them. It then swipes through the tabs and fails if the island's two edges ever move by different amounts while it resizes.
 

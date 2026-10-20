@@ -25,8 +25,8 @@ grep -E "warning:" "$SC/archive.log" | grep "Desktop/Notchly/Notchly/" | sed -E 
 xcodebuild -exportArchive -archivePath "$SC/BetterNotch.xcarchive" -exportOptionsPlist "$ROOT/scripts/ExportOptions.plist" -exportPath "$SC/export" > "$SC/export.log" 2>&1
 # Bundle the Rust claude-usage-monitor as a signed helper, then re-seal the app around it.
 ID="Developer ID Application: Max Hunt (36JR976L6Y)"
-# The usage monitor checkout (github.com/max-hunts/claude-usage-monitor).
-MON=${USAGE_MONITOR_DIR:-$HOME/Desktop/claude-usage-monitor}
+# The usage monitor's source, kept in this repo.
+MON=${USAGE_MONITOR_DIR:-$ROOT/usage-monitor}
 APP="$SC/export/BetterNotch.app"
 (cd "$MON" && cargo build --release -q)
 mkdir -p "$APP/Contents/Helpers"
