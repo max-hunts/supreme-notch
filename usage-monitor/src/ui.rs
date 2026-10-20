@@ -1,0 +1,320 @@
+use chrono::{DateTime, Utc};
+use ratatui::{
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Paragraph},
+    Frame,
+};
+
+use crate::models::AggregatedUsage;
+
+const BG: Color = Color::Rgb(22, 27, 34);
+const FG: Color = Color::Rgb(230, 237, 243);
+const ACCENT: Color = Color::Rgb(88, 166, 255);
+const SUCCESS: Color = Color::Rgb(63, 185, 80);
+const ORANGE: Color = Color::Rgb(255, 136, 0);
+const DANGER: Color = Color::Rgb(248, 81, 73);
+const MUTED: Color = Color::Rgb(139, 148, 158);
+const BAR_EMPTY: Color = Color::Rgb(48, 54, 61);
+
+pub fn render(
+    f: &mut Frame,
+    area: Rect,
+    usage: &AggregatedUsage,
+    last_updated: &str,
+    error: Option<&str>,
+) {
+    f.render_widget(Block::default().style(Style::default().bg(BG)), area);
+
+    // 5h window, 7d window, one per model-scoped weekly window, Codex weekly.
+    let sections = 3 + usage.scoped_weekly.len();
+
+    let mut constraints = vec![
+        Constraint::Length(1), // header
+        Constraint::Min(0),    // top flex
+    ];
+    for i in 0..sections {
+        if i > 0 {
+            constraints.push(Constraint::Length(1)); // spacer
+        }
+        constraints.push(Constraint::Length(3));
+    }
+    constraints.push(Constraint::Min(0)); // bottom flex
+    constraints.push(Constraint::Length(1)); // footer
+
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(constraints)
+        .split(area);
+
+    // Section n occupies chunks[2 + 2n]: one spacer sits before every section but the first.
+    let section = |n: usize| chunks[2 + 2 * n];
+
+    render_header(f, chunks[0]);
+    if usage.claude_available {
+        render_window(
+            f,
+            section(0),
+            if error.is_some() {
+                "5h Window (stale)"
+            } else {
+                "5h Window"
+            },
+            usage.five_hour_util,
+            usage.five_hour_resets_at.as_deref(),
+        );
+        render_window(
+            f,
+            section(1),
+            if error.is_some() {
+                "7d Window (stale)"
+            } else {
+                "7d Window"
+            },
+            usage.seven_day_util,
+            usage.seven_day_resets_at.as_deref(),
+        );
+    } else {
+        for (index, label) in [(0, "5h Window"), (1, "7d Window")] {
+            render_section(
+                f,
+                section(index),
+                Line::from(format!("{label}   unavailable")),
+                0.0,
+                false,
+            );
+        }
+    }
+    for (i, scoped) in usage.scoped_weekly.iter().enumerate() {
+        render_window(
+            f,
+            section(2 + i),
+            &format!("7d {}", scoped.label),
+            scoped.util,
+            scoped.resets_at.as_deref(),
+        );
+    }
+    let codex = &usage.codex;
+    let suffix = if codex.error.is_some() {
+        " (stale)"
+    } else {
+        ""
+    };
+    if let Some(weekly) = &codex.weekly {
+        render_window(
+            f,
+            section(sections - 1),
+            &format!("Codex Weekly{suffix}"),
+            weekly.utilization,
+            weekly.resets_at.as_deref(),
+        );
+    } else {
+        render_section(
+            f,
+            section(sections - 1),
+            Line::from("Codex Weekly   unavailable"),
+            0.0,
+            false,
+        );
+    }
+    let errors = [
+        error.map(|e| format!("Claude: {e}")),
+        codex.error.as_ref().map(|e| format!("Codex: {e}")),
+    ]
+    .into_iter()
+    .flatten()
+    .collect::<Vec<_>>()
+    .join(" · ");
+    let error = if errors.is_empty() {
+        None
+    } else {
+        Some(errors.as_str())
+    };
+    render_footer(f, chunks[chunks.len() - 1], last_updated, error);
+}
+
+fn render_header(f: &mut Frame, area: Rect) {
+    let line = Line::from(vec![
+        Span::styled(
+            "Claude + Codex Usage",
+            Style::default().fg(FG).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled("   ", Style::default().bg(BG)),
+        Span::styled("●", Style::default().fg(SUCCESS)),
+        Span::styled(" live   ", Style::default().fg(MUTED)),
+        Span::styled("Claude / OpenAI", Style::default().fg(ACCENT)),
+        Span::styled("   ·   e: edit creds  q: quit", Style::default().fg(MUTED)),
+    ]);
+    let p = Paragraph::new(line)
+        .alignment(Alignment::Center)
+        .style(Style::default().bg(BG));
+    f.render_widget(p, area);
+}
+
+fn render_window(f: &mut Frame, area: Rect, name: &str, util: f64, resets_at: Option<&str>) {
+    let label = Line::from(vec![
+        Span::styled(format!("{}   ", name), Style::default().fg(MUTED)),
+        Span::styled(
+            format!("{:.0}%", util),
+            Style::default().fg(FG).add_modifier(Modifier::BOLD),
+        ),
+        Span::styled(
+            format!("   ·   resets in {}", format_resets_in(resets_at)),
+            Style::default().fg(MUTED),
+        ),
+    ]);
+
+    render_section(f, area, label, util, true);
+}
+
+fn render_section(f: &mut Frame, area: Rect, label: Line<'_>, util: f64, draw_bar: bool) {
+    let rows = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Length(1),
+        ])
+        .split(area);
+
+    let p = Paragraph::new(label)
+        .alignment(Alignment::Center)
+        .style(Style::default().bg(BG));
+    f.render_widget(p, rows[0]);
+
+    if draw_bar {
+        render_bar(f, rows[1], (util / 100.0).clamp(0.0, 1.0), bar_color(util));
+    } else {
+        f.render_widget(Block::default().style(Style::default().bg(BG)), rows[1]);
+    }
+}
+
+fn render_bar(f: &mut Frame, area: Rect, ratio: f64, fill: Color) {
+    let total_w = area.width as usize;
+    if total_w == 0 {
+        return;
+    }
+    let bar_w = total_w.saturating_sub(8).clamp(10, 120);
+    let bar_w = bar_w.min(total_w);
+    let pad = (total_w - bar_w) / 2;
+
+    let filled = ((bar_w as f64) * ratio).round() as usize;
+    let filled = filled.min(bar_w);
+    let empty = bar_w - filled;
+
+    let mut spans = Vec::with_capacity(4);
+    if pad > 0 {
+        spans.push(Span::styled(" ".repeat(pad), Style::default().bg(BG)));
+    }
+    spans.push(Span::styled(
+        "━".repeat(filled),
+        Style::default().fg(fill).bg(BG),
+    ));
+    spans.push(Span::styled(
+        "━".repeat(empty),
+        Style::default().fg(BAR_EMPTY).bg(BG),
+    ));
+    let trailing = total_w - pad - bar_w;
+    if trailing > 0 {
+        spans.push(Span::styled(" ".repeat(trailing), Style::default().bg(BG)));
+    }
+
+    let p = Paragraph::new(Line::from(spans)).style(Style::default().bg(BG));
+    f.render_widget(p, area);
+}
+
+fn bar_color(util: f64) -> Color {
+    if util >= 100.0 {
+        DANGER
+    } else {
+        ORANGE
+    }
+}
+
+fn format_resets_in(resets_at: Option<&str>) -> String {
+    let Some(s) = resets_at else {
+        return "—".to_string();
+    };
+    let Ok(dt) = DateTime::parse_from_rfc3339(s) else {
+        return "—".to_string();
+    };
+    let delta = dt.with_timezone(&Utc) - Utc::now();
+    let secs = delta.num_seconds();
+    if secs <= 0 {
+        return "now".to_string();
+    }
+    let days = secs / 86_400;
+    let hours = (secs % 86_400) / 3_600;
+    let mins = (secs % 3_600) / 60;
+    if days > 0 {
+        format!("{}d {}h", days, hours)
+    } else if hours > 0 {
+        format!("{}h {}m", hours, mins)
+    } else {
+        format!("{}m", mins.max(1))
+    }
+}
+
+fn render_footer(f: &mut Frame, area: Rect, last_updated: &str, error: Option<&str>) {
+    let content = if let Some(err) = error {
+        Line::from(vec![
+            Span::styled("Error: ", Style::default().fg(DANGER)),
+            Span::styled(err, Style::default().fg(DANGER)),
+            Span::styled("   ·   ", Style::default().fg(MUTED)),
+            Span::styled("q: quit", Style::default().fg(MUTED)),
+        ])
+    } else {
+        Line::from(vec![
+            Span::styled("updated ", Style::default().fg(MUTED)),
+            Span::styled(last_updated, Style::default().fg(FG)),
+            Span::styled("   ·   ", Style::default().fg(MUTED)),
+            Span::styled("q: quit", Style::default().fg(MUTED)),
+        ])
+    };
+
+    let p = Paragraph::new(content)
+        .alignment(Alignment::Center)
+        .style(Style::default().bg(BG));
+    f.render_widget(p, area);
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::{CodexStatus, WindowUsage};
+    use ratatui::{backend::TestBackend, Terminal};
+
+    #[test]
+    fn dashboard_replaces_extra_with_codex_and_marks_stale() {
+        let usage = AggregatedUsage {
+            claude_available: true,
+            five_hour_util: 12.0,
+            seven_day_util: 34.0,
+            codex: CodexStatus {
+                weekly: Some(WindowUsage {
+                    utilization: 13.0,
+                    resets_at: None,
+                }),
+                error: Some("auth 401".into()),
+                updated_at: None,
+            },
+            ..Default::default()
+        };
+        let mut terminal = Terminal::new(TestBackend::new(100, 24)).unwrap();
+        terminal
+            .draw(|f| render(f, f.area(), &usage, "12:00:00", None))
+            .unwrap();
+        let text = terminal
+            .backend()
+            .buffer()
+            .content
+            .iter()
+            .map(|cell| cell.symbol())
+            .collect::<String>();
+        assert!(text.contains("Codex Weekly (stale)   13%"));
+        assert!(text.contains("5h Window   12%"));
+        assert!(!text.contains("Extra Credits"));
+        assert!(text.contains("Codex: auth 401"));
+    }
+}
