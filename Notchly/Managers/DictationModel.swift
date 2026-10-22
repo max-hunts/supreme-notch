@@ -58,7 +58,9 @@ final class DictationModel: ObservableObject {
     private var onFailure: ((String) -> Void)?
 
     // On this Mac
-    private let audioEngine = AVAudioEngine()
+    /// Made only while dictating: touching an engine's input makes Core Audio add a
+    /// "CADefaultDeviceAggregate" device, which shows in the Sound menu until the engine goes.
+    private var audioEngine: AVAudioEngine?
     private var legacyRequest: SFSpeechAudioBufferRecognitionRequest?
     private var legacyTask: SFSpeechRecognitionTask?
     /// Ends the analyzer's audio input (macOS 26 types can't be stored on older systems).
@@ -232,11 +234,13 @@ final class DictationModel: ObservableObject {
                 }
             } catch {}
         }
+        let engine = AVAudioEngine()
+        audioEngine = engine
         do {
             try await analyzer.start(inputSequence: stream)
-            Self.feed(audioEngine.inputNode, converting: format, into: input)
-            audioEngine.prepare()
-            try audioEngine.start()
+            Self.feed(engine.inputNode, converting: format, into: input)
+            engine.prepare()
+            try engine.start()
         } catch {
             tearDownOnDevice(finalize: false)
             fail("The microphone couldn't start.")
@@ -263,10 +267,12 @@ final class DictationModel: ObservableObject {
         request.addsPunctuation = true
         legacyRequest = request
 
-        Self.feed(audioEngine.inputNode, into: request)
-        audioEngine.prepare()
+        let engine = AVAudioEngine()
+        audioEngine = engine
+        Self.feed(engine.inputNode, into: request)
+        engine.prepare()
         do {
-            try audioEngine.start()
+            try engine.start()
         } catch {
             tearDownOnDevice(finalize: false)
             fail("The microphone couldn't start.")
@@ -285,8 +291,11 @@ final class DictationModel: ObservableObject {
 
     /// `finalize` lets the last words still in flight come through before the session ends.
     private func tearDownOnDevice(finalize: Bool) {
-        if audioEngine.isRunning { audioEngine.stop() }
-        audioEngine.inputNode.removeTap(onBus: 0)
+        if let audioEngine {
+            if audioEngine.isRunning { audioEngine.stop() }
+            audioEngine.inputNode.removeTap(onBus: 0)
+        }
+        audioEngine = nil
         legacyRequest?.endAudio()
         legacyRequest = nil
         legacyTask?.finish()
