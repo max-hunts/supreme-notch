@@ -45,12 +45,11 @@ save(VStack(spacing: 18) {
 }.padding(.vertical, 22).frame(width: 520).background(bg), "closed-notch.png")
 // 1b. Time until reset, one closed notch per style
 save(VStack(spacing: 18) {
-    ForEach(UsageResetStyle.allCases) { style in
+    ForEach([UsageResetStyle.paceTick, .timeRail]) { style in
         VStack(spacing: 6) {
             Closed(b: bars([55, 20, 70, 35], elapsed: [0.3, 0.6, 0.55, 0.5]), muted: false, resetStyle: style)
             Caption(t: style == .paceTick ? "Pace tick (default): color below the line is to spare"
-                : style == .timeRail ? "Time rail: the thin line beside each bar is the time left"
-                : "Forecast: the shaded color is what the current rate uses before the reset")
+                : "Time rail: the thin line beside each bar is the time left")
         }
     }
 }.padding(.vertical, 22).frame(width: 520).background(bg), "usage-reset-styles.png")

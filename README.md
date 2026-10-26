@@ -47,16 +47,16 @@ While music plays, the album artwork takes the left wing, spaced like the usage 
 Colors follow how much is used, warming from about halfway. Claude's run cold to hot, from blue through cyan, green, amber and orange to red at 85%. Codex's run green through yellow and orange to red at 75%. Any bar at its limit is solid purple.
 
 <p align="center">
-  <img src="docs/images/usage-reset-styles.png" width="520" alt="The three ways a usage bar shows the time until its limit resets: a white pace tick, a thin time rail beside each bar, and a forecast that shades the color you're on course to use">
+  <img src="docs/images/usage-reset-styles.png" width="520" alt="The two ways a usage bar shows the time until its limit resets: a white pace tick, and a thin time rail beside each bar">
 </p>
 
-Each bar also shows how far its 5-hour or weekly window has run until the limit resets. By default a white pace tick marks where the color would end if you used the limit evenly, so color below the tick is to spare and a bar whose color ends above it is running ahead. A time rail beside each bar shrinks as the reset nears instead, and a forecast shades the color your current rate would use up before the reset.
+Each bar also shows how far its 5-hour or weekly window has run until the limit resets. By default a white pace tick marks where the color would end if you used the limit evenly, so color below the tick is to spare and a bar whose color ends above it is running ahead. A time rail beside each bar shrinks as the reset nears instead, or choose None to show usage only.
 
 <p align="center">
-  <img src="docs/images/usage-bar-styles.png" width="560" alt="Usage bar settings: Color hangs or Gray rises for the bars, and Pace tick, Time rail or Forecast for the time until reset">
+  <img src="docs/images/usage-bar-styles.png" width="560" alt="Usage bar settings: Color hangs or Gray rises for the bars, and Pace tick, Time rail or None for the time until reset">
 </p>
 
-Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom, and which of the three reset styles to use. The same page chooses which limits get a bar beside the camera (5-hour, weekly, Fable weekly, Codex 5-hour, Codex weekly); the Usage tab always shows them all.
+Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom, and how to show the time until reset (pace tick, time rail, or none). The same page chooses which limits get a bar beside the camera (5-hour, weekly, Fable weekly, Codex 5-hour, Codex weekly); the Usage tab always shows them all.
 
 ## Opened notch
 

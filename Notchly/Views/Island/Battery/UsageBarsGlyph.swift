@@ -28,8 +28,8 @@ enum UsageResetStyle: String, CaseIterable, Identifiable {
     case paceTick
     /// A thin line beside each bar that shrinks as the reset nears.
     case timeRail
-    /// Darkens the color you're on course to use before the reset, at the current rate.
-    case forecast
+    /// No time shown; the bars show usage only.
+    case off
 
     var id: String { rawValue }
 
@@ -37,7 +37,7 @@ enum UsageResetStyle: String, CaseIterable, Identifiable {
         switch self {
         case .paceTick: return "Pace tick"
         case .timeRail: return "Time rail"
-        case .forecast: return "Forecast"
+        case .off: return "None"
         }
     }
 
@@ -45,7 +45,7 @@ enum UsageResetStyle: String, CaseIterable, Identifiable {
         switch self {
         case .paceTick: return "Even pace"
         case .timeRail: return "Time left"
-        case .forecast: return "Projected use"
+        case .off: return "Usage only"
         }
     }
 }
@@ -89,8 +89,6 @@ struct UsageBarsGlyph: View {
     static let tickOverhang: CGFloat = 1
     static let railWidth: CGFloat = 1.5
     static let railGap: CGFloat = 1
-    /// Too early in a window to forecast from: a few minutes' use would fill the bar.
-    static let minimumForecastElapsed = 0.05
 
     static func width(barCount: Int, resetStyle: UsageResetStyle = .paceTick) -> CGFloat {
         guard barCount > 0 else { return 0 }
@@ -146,20 +144,6 @@ struct UsageBarsGlyph: View {
         .frame(width: Self.railWidth, height: height)
     }
 
-    /// The band of color the current rate would use up before the reset.
-    @ViewBuilder
-    private func forecastShadow(_ bar: UsageBar, used: CGFloat) -> some View {
-        if resetStyle == .forecast, let elapsed = bar.elapsed, elapsed >= Self.minimumForecastElapsed {
-            let projected = min(used / CGFloat(elapsed), 1)
-            if projected > used {
-                Color.black.opacity(0.55)
-                    .frame(height: height * (projected - used))
-                    .offset(y: height * (1 - projected))
-                    .frame(maxHeight: .infinity, alignment: .top)
-            }
-        }
-    }
-
     @ViewBuilder
     private func barView(_ bar: UsageBar) -> some View {
         let used = CGFloat(min(max(bar.percent / 100, 0), 1))
@@ -184,7 +168,6 @@ struct UsageBarsGlyph: View {
                     Capsule()
                         .fill(color)
                         .frame(height: colorHeight)
-                    forecastShadow(bar, used: used)
                 }
             case .grayRises:
                 // At least a dot once anything is used, and never covering the last dot of color.
@@ -198,7 +181,6 @@ struct UsageBarsGlyph: View {
                             .fill(Self.dimColor)
                             .frame(height: grayHeight)
                     }
-                    forecastShadow(bar, used: used)
                 }
             }
         }
