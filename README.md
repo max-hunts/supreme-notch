@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="Notchly/Resources/Assets.xcassets/AppIcon.appiconset/logo_256x256.png" width="96" height="96" alt="App icon">
+  <img src="SupremeNotch/Resources/Assets.xcassets/AppIcon.appiconset/logo_256x256.png" width="96" height="96" alt="App icon">
 </p>
 
-<h1 align="center">BetterNotch</h1>
+<h1 align="center">SupremeNotch</h1>
 
 <p align="center">
   A native macOS app that turns the MacBook notch into a status bar, an agent console and a scratch space.
@@ -14,7 +14,7 @@
   <img src="https://img.shields.io/badge/License-MIT-blue?style=flat-square" alt="MIT License">
 </p>
 
-BetterNotch is a fork of [Notchly](https://github.com/Notchly/Notchly) (MIT), renamed and maintained by Max Hunt. If you are coming from Notchly, the first launch copies your settings, usage keys and agent hooks across.
+SupremeNotch is a fork of [Notchly](https://github.com/Notchly/Notchly) (MIT), maintained by Max Hunt. It was called BetterNotch until version 3.0. If you are coming from BetterNotch or Notchly, the first launch copies your settings, usage keys and agent hooks across.
 
 ## At a glance
 
@@ -115,7 +115,7 @@ Each conversation is a bare chat: Codex runs in an empty private folder, read-on
 
 ## Agent alerts
 
-BetterNotch installs small hooks into Claude Code, Codex and Cursor, and shows their events in the notch:
+SupremeNotch installs small hooks into Claude Code, Codex and Cursor, and shows their events in the notch:
 
 - **Approvals.** Approve or deny a tool request from the notch, or hand it back to the agent's own prompt.
 - **Questions.** When an agent asks you a question, the notch shows it with an Open session button. Questions never get an Approve button.
@@ -146,34 +146,34 @@ Short notices that slide out of the notch and go away on their own:
 
 ## Install
 
-1. Download the latest `BetterNotch-<version>.zip` from [Releases](../../releases).
-2. Unzip it and move **BetterNotch.app** to Applications. If you still have Notchly.app, quit it and move it to the Trash first.
+1. Download the latest `SupremeNotch-<version>.zip` from [Releases](../../releases).
+2. Unzip it and move **SupremeNotch.app** to Applications. If you still have BetterNotch.app or Notchly.app, quit it and move it to the Trash first.
 3. Open it. The build is signed with a Developer ID and notarized by Apple.
 
-When moving from Notchly, macOS asks once per saved usage key for permission to copy it, and Calendar, Bluetooth, Automation and Downloads access need granting again because the app has a new identity.
+When moving from BetterNotch or Notchly, macOS asks once per saved usage key for permission to copy it, and Calendar, Bluetooth, Automation, Downloads and Microphone access need granting again because the app has a new identity. Turn Launch at Login back on in Settings if macOS asks, and remove the old app from **System Settings → General → Login Items & Extensions** if it is still listed.
 
-Automatic updates are turned off in this fork for now, so install new releases by hand.
+There is no built-in updater, so install new releases by hand.
 
 ## Privacy
 
-Everything runs on your Mac. There is no analytics or telemetry. The only network calls are the ones you turn on: the usage monitor asks Claude and OpenAI for your own usage, the Ask tab sends your questions to OpenAI through Codex when you ask one, and the internet check pings `www.apple.com`. Agent hooks write to a local folder that only this app reads.
+Everything runs on your Mac. There is no analytics or telemetry. The only network calls are the ones you turn on: the usage monitor asks Claude and OpenAI for your own usage, the Ask tab sends your questions to OpenAI through Codex when you ask one, ChatGPT dictation (the default) sends your recording to OpenAI to transcribe it, unless you set Dictation to On this Mac, and the internet check pings `www.apple.com`. Agent hooks write to a local folder that only this app reads.
 
 ## Build from source
 
 ```sh
 git clone git@github.com:max-hunts/better-notch.git
 cd better-notch
-open Notchly.xcodeproj
+open SupremeNotch.xcodeproj
 ```
 
 A Release build needs the usage monitor copied into the app after export, then the app re-signed:
 
 ```sh
 cargo build --release --manifest-path usage-monitor/Cargo.toml
-cp usage-monitor/target/release/claude-usage-monitor BetterNotch.app/Contents/Helpers/
-codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" BetterNotch.app/Contents/Helpers/claude-usage-monitor
+cp usage-monitor/target/release/claude-usage-monitor SupremeNotch.app/Contents/Helpers/
+codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" SupremeNotch.app/Contents/Helpers/claude-usage-monitor
 codesign --force --options runtime --timestamp --sign "Developer ID Application: <you>" \
-  --preserve-metadata=entitlements,requirements,flags,runtime BetterNotch.app
+  --preserve-metadata=entitlements,requirements,flags,runtime SupremeNotch.app
 ```
 
 The `scripts` folder has the rest of the workflow, all for a Mac with Xcode:
@@ -186,14 +186,13 @@ Both build scripts build the usage monitor from `usage-monitor/` (or wherever `U
 
 To check the layout after a change, run `scripts/layout-check.sh`. It shows sample alerts in the real island, saves a picture of each, and fails if the buttons are not 12 pt from the island's edges or the text sits too far above them. It then swipes through the tabs and fails if the island's two edges ever move by different amounts while it resizes.
 
-The README images are drawn by the app's own views with sample data. In a Debug build, run `BetterNotch.app/Contents/MacOS/BetterNotch -renderReadmeImages <folder>` to regenerate the tab and alert images.
+The README images are drawn by the app's own views with sample data. In a Debug build, run `SupremeNotch.app/Contents/MacOS/SupremeNotch -renderReadmeImages <folder>` to regenerate the tab and alert images.
 
 ## Credits
 
 - [Notchly](https://github.com/Notchly/Notchly), the app this fork is built on (MIT).
 - [DuoBar](https://github.com/Mikeli7666/DuoBar) by Mike Li, for the status ring's geometry (MIT).
 - [SkyLightWindow](https://github.com/Lakr233/SkyLightWindow) for overlay windows (MIT).
-- [Sparkle](https://sparkle-project.org/) for updates.
 - [mediaremote-adapter](https://github.com/ejbills/mediaremote-adapter) for Now Playing access.
 
 ## License

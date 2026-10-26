@@ -1,0 +1,14 @@
+//
+//  AgentHookInstallState.swift
+//  SupremeNotch
+//
+//  Created by n0xbyte on 03.06.2026.
+//
+
+enum AgentHookInstallState {
+    case unknown
+    case installing
+    case installed
+    case notInstalled
+    case failed(String)
+}

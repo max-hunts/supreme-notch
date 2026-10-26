@@ -2,12 +2,12 @@
 # Renders the README's status ring, closed notch and usage color images straight from the
 # battery views, without building the app. Usage: scripts/render-readme-glyphs.sh [folder]
 # (default docs/images). The tab and alert images come from a Debug build instead:
-# BetterNotch.app/Contents/MacOS/BetterNotch -renderReadmeImages <folder>
+# SupremeNotch.app/Contents/MacOS/SupremeNotch -renderReadmeImages <folder>
 set -e
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 OUT=${1:-$ROOT/docs/images}
-B="$ROOT/Notchly/Views/Island/Battery"
-WORK=${TMPDIR:-/tmp}/betternotch-readme-glyphs
+B="$ROOT/SupremeNotch/Views/Island/Battery"
+WORK=${TMPDIR:-/tmp}/supremenotch-readme-glyphs
 mkdir -p "$WORK" "$OUT"
 cp "$ROOT/scripts/readme-glyphs/main.swift" "$ROOT/scripts/readme-glyphs/stubs.swift" "$WORK/"
 cd "$WORK"

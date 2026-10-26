@@ -3,24 +3,16 @@
 <plist version="1.0">
 <dict>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>BetterNotch shows the battery level of your AirPods when they connect.</string>
+	<string>SupremeNotch shows the battery level of your AirPods when they connect.</string>
 	<key>NSCalendarsFullAccessUsageDescription</key>
-	<string>BetterNotch reads your calendar to remind you in the notch shortly before a meeting starts. It never changes events.</string>
+	<string>SupremeNotch reads your calendar to remind you in the notch shortly before a meeting starts. It never changes events.</string>
 	<key>NSCalendarsUsageDescription</key>
-	<string>BetterNotch reads your calendar to remind you in the notch shortly before a meeting starts. It never changes events.</string>
+	<string>SupremeNotch reads your calendar to remind you in the notch shortly before a meeting starts. It never changes events.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>BetterNotch watches your Downloads folder to show a short notice when a download finishes.</string>
+	<string>SupremeNotch watches your Downloads folder to show a short notice when a download finishes.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>BetterNotch listens only while you dictate a question in the Ask tab. Speech is transcribed on this Mac.</string>
+	<string>SupremeNotch listens only while you dictate a question in the Ask tab. By default the recording goes to ChatGPT for transcription, using your Codex sign-in. To keep it on this Mac, set Dictation to On this Mac in Settings.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>BetterNotch turns what you dictate in the Ask tab into text, on this Mac only.</string>
-	<key>SUAutomaticallyUpdate</key>
-	<false/>
-	<key>SUEnableAutomaticChecks</key>
-	<false/>
-	<key>SUEnableInstallerLauncherService</key>
-	<true/>
-	<key>SUScheduledCheckInterval</key>
-	<integer>21600</integer>
+	<string>Used only when Dictation is set to On this Mac in Settings: SupremeNotch turns what you dictate in the Ask tab into text without it leaving this Mac.</string>
 </dict>
 </plist>

@@ -1,6 +1,6 @@
 # Architecture
 
-Notchly is a SwiftUI-first macOS app with a small AppKit shell. The main architectural goal is to keep platform lifecycle concerns out of feature views.
+SupremeNotch is a SwiftUI-first macOS app with a small AppKit shell. The main architectural goal is to keep platform lifecycle concerns out of feature views.
 
 ## Runtime Flow
 
@@ -29,7 +29,6 @@ flowchart TD
 - `BatteryManager`
 - `DynamicManager`
 - `SettingsWindow`
-- Sparkle updater controller
 - lock-screen overlay model
 
 `AppMenuController` owns the menu bar item and commands.
