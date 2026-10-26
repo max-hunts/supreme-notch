@@ -161,8 +161,8 @@ Everything runs on your Mac. There is no analytics or telemetry. The only networ
 ## Build from source
 
 ```sh
-git clone git@github.com:max-hunts/better-notch.git
-cd better-notch
+git clone git@github.com:max-hunts/supreme-notch.git
+cd supreme-notch
 open SupremeNotch.xcodeproj
 ```
 
