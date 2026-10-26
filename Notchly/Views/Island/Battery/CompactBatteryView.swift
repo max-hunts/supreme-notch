@@ -23,6 +23,7 @@ struct CompactBatteryView: View {
     var micMuted = false
     var usageBars: [UsageBar] = []
     var usageBarStyle: UsageBarStyle = .colorHangs
+    var usageResetStyle: UsageResetStyle = .paceTick
     var cameraHousingInset: CGFloat = Self.defaultCameraHousingInset
     var isLowPowerMode = false
     var isChargeOnHold = false
@@ -41,12 +42,13 @@ struct CompactBatteryView: View {
     /// The wing left of the camera for the usage bars and muted mic; 0 when both are off.
     static func leftWingWidth(
         barCount: Int,
+        resetStyle: UsageResetStyle = .paceTick,
         micMuted: Bool,
         closedHeight: CGFloat,
         cameraHousingInset: CGFloat = defaultCameraHousingInset
     ) -> CGFloat {
         guard barCount > 0 || micMuted else { return 0 }
-        let bars = UsageBarsGlyph.width(barCount: barCount)
+        let bars = UsageBarsGlyph.width(barCount: barCount, resetStyle: resetStyle)
         let mic = micMuted ? micIconWidth : 0
         let gap = barCount > 0 && micMuted ? leftWingSpacing : 0
         // The same gap on both sides: to the island's edge, and to the camera housing.
@@ -96,6 +98,7 @@ struct CompactBatteryView: View {
     var body: some View {
         let leftWing = Self.leftWingWidth(
             barCount: usageBars.count,
+            resetStyle: usageResetStyle,
             micMuted: micMuted,
             closedHeight: size.height,
             cameraHousingInset: cameraHousingInset
@@ -107,7 +110,8 @@ struct CompactBatteryView: View {
                         UsageBarsGlyph(
                             bars: usageBars,
                             height: Self.barsHeight(closedHeight: size.height),
-                            style: usageBarStyle
+                            style: usageBarStyle,
+                            resetStyle: usageResetStyle
                         )
                     }
                     if micMuted {

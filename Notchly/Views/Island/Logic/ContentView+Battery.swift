@@ -67,6 +67,7 @@ extension ContentView {
                     micMuted: closedMicMuted,
                     usageBars: closedUsageBars,
                     usageBarStyle: settingsManager.usageBarStyle,
+                    usageResetStyle: settingsManager.usageResetStyle,
                     cameraHousingInset: cameraHousingInset,
                     isLowPowerMode: batteryManager.isLowPowerMode,
                     isChargeOnHold: batteryManager.isChargeOnHold,

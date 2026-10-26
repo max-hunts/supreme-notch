@@ -39,6 +39,18 @@ nonisolated struct UsageWindow: Equatable, Identifiable {
     /// Percent of the window used, 0 to 100+.
     let percent: Double
     let resetsAt: Date?
+
+    /// How long the window runs: five hours or a week.
+    var duration: TimeInterval {
+        kind == .fiveHour || kind == .codexFiveHour ? 5 * 3600 : 7 * 86400
+    }
+
+    /// The share of the window already gone, 0 to 1. Nil when the reset time is unknown,
+    /// as for a 5-hour window with no session running.
+    func elapsed(at now: Date = Date()) -> Double? {
+        guard let resetsAt else { return nil }
+        return min(max(1 - resetsAt.timeIntervalSince(now) / duration, 0), 1)
+    }
 }
 
 nonisolated struct AIUsageSnapshot: Equatable {

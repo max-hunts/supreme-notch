@@ -132,10 +132,10 @@ extension ContentView {
         guard settingsManager.showUsageTab, case let .loaded(snapshot) = aiUsageMonitor.state else { return [] }
         var bars = snapshot.claude
             .filter { settingsManager.showsUsageBar($0.kind) }
-            .map { UsageBar(id: $0.label, percent: $0.percent, scale: .claude) }
+            .map { UsageBar(id: $0.label, percent: $0.percent, scale: .claude, elapsed: $0.elapsed()) }
         bars += snapshot.codexWindows
             .filter { settingsManager.showsUsageBar($0.kind) }
-            .map { UsageBar(id: $0.label, percent: $0.percent, scale: .codex) }
+            .map { UsageBar(id: $0.label, percent: $0.percent, scale: .codex, elapsed: $0.elapsed()) }
         return bars
     }
 
@@ -143,6 +143,7 @@ extension ContentView {
     var batteryLeftWingWidth: CGFloat {
         CompactBatteryView.leftWingWidth(
             barCount: closedUsageBars.count,
+            resetStyle: settingsManager.usageResetStyle,
             micMuted: closedMicMuted,
             closedHeight: closedHeight,
             cameraHousingInset: cameraHousingInset

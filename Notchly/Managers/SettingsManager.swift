@@ -103,6 +103,7 @@ final class SettingsManager: ObservableObject {
         static let showMeetingCountdown = true
         static let showUsageTab = true
         static let usageBarStyle = UsageBarStyle.colorHangs
+        static let usageResetStyle = UsageResetStyle.paceTick
         static let chargeHoldStyle = ChargeHoldStyle.teal
         static let showSystemTab = true
         static let showFileShelf = true
@@ -357,6 +358,11 @@ final class SettingsManager: ObservableObject {
         didSet { UserDefaults.standard.set(usageBarStyle.rawValue, forKey: "usageBarStyle") }
     }
 
+    /// How each usage bar shows the time left until its limit resets.
+    @Published var usageResetStyle: UsageResetStyle {
+        didSet { UserDefaults.standard.set(usageResetStyle.rawValue, forKey: "usageResetStyle") }
+    }
+
     @Published var showSystemTab: Bool {
         didSet { UserDefaults.standard.set(showSystemTab, forKey: "showSystemTab") }
     }
@@ -449,6 +455,8 @@ final class SettingsManager: ObservableObject {
             ?? Defaults.chargeHoldStyle
         self.usageBarStyle = UserDefaults.standard.string(forKey: "usageBarStyle").flatMap(UsageBarStyle.init(rawValue:))
             ?? Defaults.usageBarStyle
+        self.usageResetStyle = UserDefaults.standard.string(forKey: "usageResetStyle").flatMap(UsageResetStyle.init(rawValue:))
+            ?? Defaults.usageResetStyle
         self.showSystemTab = UserDefaults.standard.object(forKey: "showSystemTab") as? Bool ?? Defaults.showSystemTab
         self.showFileShelf = UserDefaults.standard.object(forKey: "showFileShelf") as? Bool ?? Defaults.showFileShelf
         self.showMicMute = UserDefaults.standard.object(forKey: "showMicMute") as? Bool ?? Defaults.showMicMute

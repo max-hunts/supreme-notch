@@ -6,6 +6,7 @@
 //  The colored part is what is left, and the dim part below it what is used, so a fresh
 //  limit is a full colored bar. Claude's colors run cold to hot (blue through green to
 //  red) as usage grows, Codex's run green to red, and a bar at its limit is solid purple.
+//  Each bar also shows how far its window has run until the limit resets (UsageResetStyle).
 //
 
 import SwiftUI
@@ -17,6 +18,36 @@ struct UsageBar: Equatable, Identifiable {
     /// Percent of the limit used, 0 to 100+.
     let percent: Double
     let scale: Scale
+    /// The share of the window already gone, 0 to 1; nil when the reset time is unknown.
+    var elapsed: Double? = nil
+}
+
+/// How a closed-notch usage bar shows the time until its limit resets.
+enum UsageResetStyle: String, CaseIterable, Identifiable {
+    /// A white line where the color would end at an even pace; color below it is to spare.
+    case paceTick
+    /// A thin line beside each bar that shrinks as the reset nears.
+    case timeRail
+    /// Darkens the color you're on course to use before the reset, at the current rate.
+    case forecast
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .paceTick: return "Pace tick"
+        case .timeRail: return "Time rail"
+        case .forecast: return "Forecast"
+        }
+    }
+
+    var subtitle: String {
+        switch self {
+        case .paceTick: return "Even pace"
+        case .timeRail: return "Time left"
+        case .forecast: return "Projected use"
+        }
+    }
 }
 
 /// Which part of a closed-notch usage bar is drawn as its own capsule.
@@ -47,30 +78,86 @@ struct UsageBarsGlyph: View {
     let bars: [UsageBar]
     let height: CGFloat
     var style: UsageBarStyle = .colorHangs
+    var resetStyle: UsageResetStyle = .paceTick
 
     /// The used part and the empty track: opaque, so it reads the same over the color.
     static let dimColor = Color(white: 0.16)
 
     static let barWidth: CGFloat = 4
     static let barSpacing: CGFloat = 3
+    /// How far the pace tick reaches past each side of its bar, so it shows over any color.
+    static let tickOverhang: CGFloat = 1
+    static let railWidth: CGFloat = 1.5
+    static let railGap: CGFloat = 1
+    /// Too early in a window to forecast from: a few minutes' use would fill the bar.
+    static let minimumForecastElapsed = 0.05
 
-    static func width(barCount: Int) -> CGFloat {
+    static func width(barCount: Int, resetStyle: UsageResetStyle = .paceTick) -> CGFloat {
         guard barCount > 0 else { return 0 }
-        return CGFloat(barCount) * barWidth + CGFloat(barCount - 1) * barSpacing
+        let unit = barWidth + (resetStyle == .timeRail ? railGap + railWidth : 0)
+        let ticks = resetStyle == .paceTick ? 2 * tickOverhang : 0
+        return CGFloat(barCount) * unit + CGFloat(barCount - 1) * barSpacing + ticks
     }
 
     var body: some View {
         HStack(alignment: .bottom, spacing: Self.barSpacing) {
             ForEach(bars) { bar in
-                barView(bar)
-                    .frame(width: Self.barWidth, height: height)
-                    .clipShape(Capsule())
-                    .animation(.easeOut(duration: 0.4), value: bar.percent)
+                HStack(spacing: Self.railGap) {
+                    barView(bar)
+                        .frame(width: Self.barWidth, height: height)
+                        .clipShape(Capsule())
+                        .overlay(alignment: .top) { paceTick(bar) }
+                    if resetStyle == .timeRail {
+                        timeRail(bar)
+                    }
+                }
+                .animation(.easeOut(duration: 0.4), value: bar.percent)
+                .animation(.easeOut(duration: 0.4), value: bar.elapsed)
             }
         }
-        .frame(width: Self.width(barCount: bars.count), height: height)
+        .padding(.horizontal, resetStyle == .paceTick ? Self.tickOverhang : 0)
+        .frame(width: Self.width(barCount: bars.count, resetStyle: resetStyle), height: height)
         .accessibilityElement()
         .accessibilityLabel(bars.map { "\($0.id) \(Int($0.percent.rounded()))%" }.joined(separator: ", "))
+    }
+
+    // MARK: - Reset time
+
+    @ViewBuilder
+    private func paceTick(_ bar: UsageBar) -> some View {
+        if resetStyle == .paceTick, let elapsed = bar.elapsed {
+            Rectangle()
+                .fill(Color.white)
+                .frame(width: Self.barWidth + 2 * Self.tickOverhang, height: 1)
+                .offset(y: min(height * (1 - elapsed), height - 1))
+        }
+    }
+
+    /// What is left of the window hangs from the top, like the color.
+    private func timeRail(_ bar: UsageBar) -> some View {
+        ZStack(alignment: .top) {
+            Capsule().fill(Self.dimColor)
+            if let elapsed = bar.elapsed {
+                Capsule()
+                    .fill(Color.white.opacity(0.6))
+                    .frame(height: max(Self.railWidth, height * (1 - elapsed)))
+            }
+        }
+        .frame(width: Self.railWidth, height: height)
+    }
+
+    /// The band of color the current rate would use up before the reset.
+    @ViewBuilder
+    private func forecastShadow(_ bar: UsageBar, used: CGFloat) -> some View {
+        if resetStyle == .forecast, let elapsed = bar.elapsed, elapsed >= Self.minimumForecastElapsed {
+            let projected = min(used / CGFloat(elapsed), 1)
+            if projected > used {
+                Color.black.opacity(0.55)
+                    .frame(height: height * (projected - used))
+                    .offset(y: height * (1 - projected))
+                    .frame(maxHeight: .infinity, alignment: .top)
+            }
+        }
     }
 
     @ViewBuilder
@@ -97,6 +184,7 @@ struct UsageBarsGlyph: View {
                     Capsule()
                         .fill(color)
                         .frame(height: colorHeight)
+                    forecastShadow(bar, used: used)
                 }
             case .grayRises:
                 // At least a dot once anything is used, and never covering the last dot of color.
@@ -110,6 +198,7 @@ struct UsageBarsGlyph: View {
                             .fill(Self.dimColor)
                             .frame(height: grayHeight)
                     }
+                    forecastShadow(bar, used: used)
                 }
             }
         }
