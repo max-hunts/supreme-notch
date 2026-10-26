@@ -25,7 +25,7 @@ BetterNotch is a fork of [Notchly](https://github.com/Notchly/Notchly) (MIT), re
 The closed notch stays out of the way. The camera sits in the middle, with a small wing on each side:
 
 - **Right wing, the status ring.** One glyph shows three things. The outer arc is your battery level. The center shows your network: Wi-Fi bars, an Ethernet plug, or offline. The four dots along the bottom show output volume.
-- **Left wing, usage bars.** One short bar for each subscription limit: Claude's 5-hour, weekly and per-model limits, plus Codex's weekly limit and, on plans that have one, its 5-hour limit. The colored part is what's left, so a fresh limit is a full bar, and it shrinks and warms in color as you use it. Each bar also shows how far its window has run until the limit resets: a white pace tick where the color would end at an even pace (the default), a thin time rail beside the bar, or a forecast that shades the color you're on course to use before the reset. They refresh every 5 minutes. **Settings → AI Usage** switches between two bar styles and the three reset styles.
+- **Left wing, usage bars.** One short bar for each subscription limit: Claude's 5-hour, weekly and per-model limits, plus Codex's weekly limit and, on plans that have one, its 5-hour limit. The colored part is what's left, so a fresh limit is a full bar, and it shrinks and warms in color as you use it. A white tick on each bar marks an even pace to its reset (more below). They refresh every 5 minutes.
 - **Muted mic.** A red slashed mic appears next to the camera whenever your microphone is muted.
 
 Each glyph sits as far from the camera as from the notch's edge. If yours sits too close to the camera or too far from it, **Settings → General → Space Beside Camera** moves both sides in or out, with a Reset button to go back to the default.
@@ -44,13 +44,19 @@ While music plays, the album artwork takes the left wing, spaced like the usage 
   <img src="docs/images/usage-colors.png" width="460" alt="Usage color scales for Claude and Codex">
 </p>
 
-Colors follow how much is used. Claude's run cold to hot, from blue through cyan, green and amber to red. Codex's run green to red. Any bar at its limit is solid purple.
+Colors follow how much is used, warming from about halfway. Claude's run cold to hot, from blue through cyan, green, amber and orange to red at 85%. Codex's run green through yellow and orange to red at 75%. Any bar at its limit is solid purple.
 
 <p align="center">
-  <img src="docs/images/usage-bar-styles.png" width="560" alt="The two usage bar styles in settings: Color hangs, where what's left is a colored capsule, and Gray rises, where what's used is a gray capsule">
+  <img src="docs/images/usage-reset-styles.png" width="520" alt="The three ways a usage bar shows the time until its limit resets: a white pace tick, a thin time rail beside each bar, and a forecast that shades the color you're on course to use">
 </p>
 
-Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom. The same page chooses which limits get a bar beside the camera (5-hour, weekly, Fable weekly, Codex 5-hour, Codex weekly); the Usage tab always shows them all.
+Each bar also shows how far its 5-hour or weekly window has run until the limit resets. By default a white pace tick marks where the color would end if you used the limit evenly, so color below the tick is to spare and a bar whose color ends above it is running ahead. A time rail beside each bar shrinks as the reset nears instead, and a forecast shades the color your current rate would use up before the reset.
+
+<p align="center">
+  <img src="docs/images/usage-bar-styles.png" width="560" alt="Usage bar settings: Color hangs or Gray rises for the bars, and Pace tick, Time rail or Forecast for the time until reset">
+</p>
+
+Pick how the bars are drawn in **Settings → AI Usage**: what's left as a colored capsule hanging from the top (the default), or what's used as a gray capsule rising from the bottom, and which of the three reset styles to use. The same page chooses which limits get a bar beside the camera (5-hour, weekly, Fable weekly, Codex 5-hour, Codex weekly); the Usage tab always shows them all.
 
 ## Opened notch
 
