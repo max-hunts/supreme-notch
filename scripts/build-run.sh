@@ -21,9 +21,12 @@ ID="Developer ID Application: Max Hunt (36JR976L6Y)"
 # The usage monitor's source, kept in this repo.
 MON=${USAGE_MONITOR_DIR:-$ROOT/usage-monitor}
 APP="$SC/export/SupremeNotch.app"
-(cd "$MON" && cargo build --release -q)
+# Universal, like the app, so the Usage tab works on Intel Macs too.
+rustup -q target add aarch64-apple-darwin x86_64-apple-darwin
+(cd "$MON" && cargo build --release -q --target aarch64-apple-darwin && cargo build --release -q --target x86_64-apple-darwin)
 mkdir -p "$APP/Contents/Helpers"
-cp "$MON/target/release/claude-usage-monitor" "$APP/Contents/Helpers/claude-usage-monitor"
+lipo -create -output "$APP/Contents/Helpers/claude-usage-monitor" \
+  "$MON/target/aarch64-apple-darwin/release/claude-usage-monitor" "$MON/target/x86_64-apple-darwin/release/claude-usage-monitor"
 codesign --force --options runtime --timestamp --sign "$ID" "$APP/Contents/Helpers/claude-usage-monitor"
 codesign --force --options runtime --timestamp --sign "$ID" --preserve-metadata=entitlements,requirements,flags,runtime "$APP"
 osascript -e 'tell application id "com.maxhunt.supremenotch" to quit' 2>/dev/null || true

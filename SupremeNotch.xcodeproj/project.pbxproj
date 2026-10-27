@@ -11,6 +11,7 @@
 		A10000022FA1000100A10002 /* com.maxhunt.supremenotch.IdentityHelper.plist in Embed LaunchDaemon */ = {isa = PBXBuildFile; fileRef = A10000042FA1000100A10004 /* com.maxhunt.supremenotch.IdentityHelper.plist */; };
 		CE09F2B32F7D845B0088ADC6 /* SkyLightWindow in Frameworks */ = {isa = PBXBuildFile; productRef = CE09F2B22F7D845B0088ADC6 /* SkyLightWindow */; };
 		CE30A0C22F71B03C006A3998 /* MediaRemoteAdapter in Frameworks */ = {isa = PBXBuildFile; productRef = CE30A0C12F71B03C006A3998 /* MediaRemoteAdapter */; };
+		CE30A0C32F71B03C006A3998 /* MediaRemoteAdapter in Embed Frameworks */ = {isa = PBXBuildFile; productRef = CE30A0C12F71B03C006A3998 /* MediaRemoteAdapter */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -52,6 +53,7 @@
 			dstPath = "";
 			dstSubfolderSpec = 10;
 			files = (
+				CE30A0C32F71B03C006A3998 /* MediaRemoteAdapter in Embed Frameworks */,
 			);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -66,19 +68,6 @@
 		CEDD2D692F6772D000574141 /* SupremeNotch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SupremeNotch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		CE09F1D42F7D5E670088ADC6 /* Exceptions for "SupremeNotch" folder in "Embed Frameworks" phase from "SupremeNotch" target */ = {
-			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
-			attributesByRelativePath = {
-				Resources/Adapters/MediaRemoteAdapter.framework = (CodeSignOnCopy, RemoveHeadersOnCopy, );
-			};
-			buildPhase = CE30A0BF2F71A89D006A3998 /* Embed Frameworks */;
-			membershipExceptions = (
-				Resources/Adapters/MediaRemoteAdapter.framework,
-			);
-		};
-/* End PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		A10000052FA1000100A10005 /* SupremeNotchIdentityHelper */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -87,9 +76,6 @@
 		};
 		CEDD2D6B2F6772D000574141 /* SupremeNotch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				CE09F1D42F7D5E670088ADC6 /* Exceptions for "SupremeNotch" folder in "Embed Frameworks" phase from "SupremeNotch" target */,
-			);
 			path = SupremeNotch;
 			sourceTree = "<group>";
 		};
@@ -487,7 +473,6 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/System/Library/PrivateFrameworks,
-					"$(PROJECT_DIR)/SupremeNotch/Resources/Adapters",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;
@@ -563,7 +548,6 @@
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(inherited)",
 					/System/Library/PrivateFrameworks,
-					"$(PROJECT_DIR)/SupremeNotch/Resources/Adapters",
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Config/Info.plist;

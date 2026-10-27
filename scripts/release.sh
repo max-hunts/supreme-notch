@@ -24,12 +24,21 @@ ID="Developer ID Application: Max Hunt (36JR976L6Y)"
 # The usage monitor's source, kept in this repo.
 MON=${USAGE_MONITOR_DIR:-$ROOT/usage-monitor}
 APP="$SC/export/SupremeNotch.app"
-(cd "$MON" && cargo build --release -q)
+# Universal, like the app, so the Usage tab works on Intel Macs too.
+rustup -q target add aarch64-apple-darwin x86_64-apple-darwin
+(cd "$MON" && cargo build --release -q --target aarch64-apple-darwin && cargo build --release -q --target x86_64-apple-darwin)
 mkdir -p "$APP/Contents/Helpers"
-cp "$MON/target/release/claude-usage-monitor" "$APP/Contents/Helpers/claude-usage-monitor"
+lipo -create -output "$APP/Contents/Helpers/claude-usage-monitor" \
+  "$MON/target/aarch64-apple-darwin/release/claude-usage-monitor" "$MON/target/x86_64-apple-darwin/release/claude-usage-monitor"
 codesign --force --options runtime --timestamp --sign "$ID" "$APP/Contents/Helpers/claude-usage-monitor"
 codesign --force --options runtime --timestamp --sign "$ID" --preserve-metadata=entitlements,requirements,flags,runtime "$APP"
 codesign --verify --deep --strict "$APP"
+# Every binary has to run on Intel Macs too; an arm64-only framework stops the app opening there.
+find "$APP" -type f -perm -u+x -exec sh -c 'for f; do file -b "$f" | grep -q "^Mach-O" || continue
+  for arch in x86_64 arm64; do lipo -archs "$f" | grep -qw "$arch" || { echo "Not universal: ${f#*.app/}"; exit 1; }; done; done' sh {} +
+# Every framework the app links has to be inside it.
+otool -L "$APP/Contents/MacOS/SupremeNotch" | sed -n 's|^[[:space:]]*@rpath/\([^ ]*\) .*|\1|p' | sort -u | while read -r lib; do
+  [ -f "$APP/Contents/Frameworks/$lib" ] || { echo "Missing framework: $lib"; exit 1; }; done
 # Notarize, staple, then zip the stapled app for the release.
 (cd "$SC/export" && rm -f notarize.zip && ditto -c -k --keepParent SupremeNotch.app notarize.zip)
 xcrun notarytool submit "$SC/export/notarize.zip" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1 | grep -E "id:|status:" | tail -2
